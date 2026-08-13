@@ -26,6 +26,24 @@ function showToast(msg) {
   setTimeout(() => { toast.style.display = 'none'; }, 3000);
 }
 
+let realtimeChannel = null;
+
+function subscribeToRealtimeChanges() {
+  if (!supabaseClient || realtimeChannel) return;
+  try {
+    realtimeChannel = supabaseClient
+      .channel('public:org_nodes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'org_nodes' }, () => {
+        if (typeof loadData === 'function') {
+          loadData();
+        }
+      })
+      .subscribe();
+  } catch (e) {
+    console.error('Realtime subscription error:', e);
+  }
+}
+
 function initSupabase() {
   SUPABASE_URL = getSupabaseUrl();
   SUPABASE_KEY = getSupabaseKey();
@@ -34,6 +52,7 @@ function initSupabase() {
     try {
       supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
       updateStatusBadge('connected', '🟢 Supabase Connected');
+      subscribeToRealtimeChanges();
       return true;
     } catch (e) {
       console.error('Supabase Init Error:', e);

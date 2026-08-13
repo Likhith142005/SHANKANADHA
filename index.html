@@ -237,11 +237,15 @@
     name TEXT DEFAULT '',
     emp_id TEXT DEFAULT '',
     is_active BOOLEAN DEFAULT true,
+    branch_type TEXT DEFAULT 'A',
+    points INTEGER DEFAULT 20000,
     parent_id TEXT REFERENCES public.org_nodes(id) ON DELETE CASCADE,
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 ALTER TABLE public.org_nodes ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT true;
+ALTER TABLE public.org_nodes ADD COLUMN IF NOT EXISTS branch_type TEXT DEFAULT 'A';
+ALTER TABLE public.org_nodes ADD COLUMN IF NOT EXISTS points INTEGER DEFAULT 20000;
 ALTER TABLE public.org_nodes DISABLE ROW LEVEL SECURITY;
 ALTER TABLE public.org_nodes ENABLE ROW LEVEL SECURITY;
 

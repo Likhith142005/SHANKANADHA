@@ -872,9 +872,12 @@ async function syncAllToSupabase() {
 
   const rowsToInsert = Object.values(nodes).map(n => ({
     id: n.id,
-    name: n.data.name || '',
-    emp_id: formatEmpIdForDisplay(n.data.empId),
-    parent_id: n.parent
+    name: n.data ? (n.data.name || '') : '',
+    emp_id: formatEmpIdForDisplay(n.data ? n.data.empId : ''),
+    parent_id: n.parent,
+    is_active: (n.data && n.data.isActive !== false),
+    branch_type: n.branchType || 'A',
+    points: (n.data && n.data.points !== undefined && n.data.points !== null) ? parseInt(n.data.points) : 20000
   }));
 
   try {
@@ -901,24 +904,14 @@ async function loadData() {
       }
 
       if (data && data.length > 0) {
-        const statusMap = {};
-        const branchTypeMap = {};
-        Object.values(nodes).forEach(n => {
-          if (n.data && n.data.isActive !== undefined) {
-            statusMap[n.id] = n.data.isActive;
-          }
-          if (n.branchType) {
-            branchTypeMap[n.id] = n.branchType;
-          }
-        });
-
         nodes = {};
         idCounter = 0;
         rootId = null;
 
         data.forEach(row => {
-          const isAct = (statusMap[row.id] !== undefined) ? statusMap[row.id] : true;
-          const bType = (branchTypeMap[row.id]) ? branchTypeMap[row.id] : (row.branch_type || 'A');
+          const isAct = (row.is_active !== undefined && row.is_active !== null) ? row.is_active : true;
+          const bType = row.branch_type || 'A';
+          const pts = (row.points !== undefined && row.points !== null) ? parseInt(row.points) : 20000;
 
           nodes[row.id] = {
             id: row.id,
@@ -930,7 +923,7 @@ async function loadData() {
               name: row.name || '',
               empId: formatEmpIdForDisplay(row.emp_id),
               isActive: isAct,
-              points: 20000
+              points: pts
             }
           };
           if (row.id && row.id.startsWith('n')) {
