@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Org Chart - Supabase Backend</title>
+  
+  <!-- External Stylesheet -->
+  <link rel="stylesheet" href="styles.css">
+
+  <!-- External Libraries -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+
+  <!-- Fullscreen Security Lock Screen Overlay -->
+  <div id="login-overlay" class="login-overlay">
+    <div class="login-card">
+      <div class="login-icon">🔐</div>
+      <h2>Restricted Sign In</h2>
+      <p>Enter your credentials to access the org chart.</p>
+      
+      <form class="login-form" onsubmit="submitLogin(event)">
+        <div class="login-field-group">
+          <label for="login-username-input">Username or Email</label>
+          <input id="login-username-input" type="email" autocomplete="username" placeholder="Enter Email" required autofocus>
+        </div>
+        
+        <div class="login-field-group">
+          <div class="password-label-row">
+            <label for="login-password-input">Password</label>
+            <button type="button" id="btn-toggle-pass-eye" class="btn-toggle-show-hide" onclick="togglePasswordVisibility()" title="Show/Hide Password">👁</button>
+          </div>
+          <input id="login-password-input" type="password" autocomplete="current-password" placeholder="Enter Password" required>
+        </div>
+        
+        <div class="remember-me-row">
+          <label class="remember-me-label">
+            <input type="checkbox" id="login-remember-me" checked> Keep me logged in
+          </label>
+        </div>
+
+        <button type="submit" id="btn-login-submit">Sign In ➔</button>
+      </form>
+      <div id="login-error-msg" class="login-error-msg">❌ Invalid Email or Password.</div>
+    </div>
+  </div>
+
+  <!-- Single Unified 3-Line Hamburger Menu Button (Top-Left) -->
+  <button id="btn-hamburger-menu" class="btn-hamburger-toggle" onclick="toggleUnifiedMenu()" title="Main Menu & Tools">☰</button>
+
+  <!-- Single Unified Side Drawer Menu Panel -->
+  <div id="unified-menu-drawer">
+    <div class="drawer-header">
+      <h3>☰ Menu & Tools</h3>
+      <button class="btn-close-drawer" onclick="toggleUnifiedMenu()" title="Close Menu">✕</button>
+    </div>
+
+    <!-- Navigation Tabs (Trees / Delete / Setup) -->
+    <div class="drawer-tabs">
+      <button class="drawer-tab active" id="tab-btn-trees" onclick="switchDrawerTab('trees')">🌳 Trees</button>
+      <button class="drawer-tab" id="tab-btn-delete" onclick="switchDrawerTab('delete')">🗑️ Delete</button>
+      <button class="drawer-tab" id="tab-btn-info" onclick="switchDrawerTab('info')">🧪 Setup</button>
+    </div>
+
+    <!-- Tab 1: Inactive Red IDs Button, Search & Parent Trees Directory -->
+    <div class="tab-content active" id="tab-content-trees">
+      
+      <!-- Compact Inactive Button & Collapsible List (Above Search Bar) -->
+      <div class="tool-section" style="margin-bottom: 12px;">
+        <button class="btn-drawer-action red" id="btn-inactive-toggle" onclick="toggleInactiveListCollapse()" style="display: flex; align-items: center; justify-content: space-between;">
+          <span>🔴 Inactive</span>
+          <span id="badge-inactive-count" style="font-weight: 800; font-size: 12px;">(0)</span>
+        </button>
+        <div id="inactive-nodes-list" class="inactive-drawer-list" style="display: none; margin-top: 6px;">
+          <!-- Dynamically populated list of red nodes -->
+        </div>
+      </div>
+
+      <input type="text" id="sidebar-search" class="sidebar-search" placeholder="🔍 Search parent tree or EMC ID..." oninput="onSidebarSearchInput()">
+      
+      <div id="sidebar-list" class="sidebar-list">
+        <!-- Dynamically populated parent node list -->
+      </div>
+    </div>
+
+    <!-- Tab 2: Delete Options -->
+    <div class="tab-content" id="tab-content-delete">
+      <div class="tool-section">
+        <label class="section-title">Delete Modes</label>
+        <button class="btn-drawer-action red" id="btn-drawer-delete-mode" onclick="toggleDeleteMode()">
+          <span>🗑️ Subtree Delete Mode</span>
+          <span id="badge-delete-mode" style="font-size:11px; opacity:0.8;">OFF</span>
+        </button>
+        <button class="btn-drawer-action purple" id="btn-drawer-multiselect" onclick="toggleMultiSelectMode()" style="margin-top: 8px;">
+          <span>☑️ Multi-Select & Delete</span>
+          <span id="badge-multiselect-mode" style="font-size:11px; opacity:0.8;">OFF</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Tab 3: Setup & Experimental Features -->
+    <div class="tab-content" id="tab-content-info">
+      <div class="tool-section">
+        <label class="section-title">🧪 Experimental Features</label>
+        <button class="btn-drawer-action purple" id="btn-experimental-sizing" onclick="toggleHierarchicalSizing('subtree')">
+          <span>📐 Dynamic Subtree Sizing</span>
+          <span id="badge-experimental-sizing" style="font-size:11px; opacity:0.8;">OFF</span>
+        </button>
+        <button class="btn-drawer-action purple" id="btn-experimental-level-sizing" onclick="toggleHierarchicalSizing('level')" style="margin-top: 6px;">
+          <span>📊 Equal Level-Depth Sizing</span>
+          <span id="badge-experimental-level-sizing" style="font-size:11px; opacity:0.8;">OFF</span>
+        </button>
+      </div>
+
+      <div class="tool-section" style="margin-top: 14px;">
+        <label class="section-title">🔒 Security Control</label>
+        <button class="btn-drawer-action red" onclick="lockAppSession()">
+          <span>🔒 Lock App & Sign Out</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Drawer Zoom Controls Section -->
+    <div class="drawer-zoom-section">
+      <label class="section-title">Canvas Zoom Scale</label>
+      <div class="zoom-controls-row">
+        <button class="btn-drawer-zoom" onclick="zoomOut()" title="Zoom Out">🔍- Zoom Out</button>
+        <span id="zoom-badge" class="zoom-badge-drawer" onclick="resetZoom()" title="Reset Zoom to 100%">100%</span>
+        <button class="btn-drawer-zoom" onclick="zoomIn()" title="Zoom In">🔍+ Zoom In</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Subtree Focus Breadcrumb Bar -->
+  <div id="focus-breadcrumb-bar">
+    <span>🌿 Isolated View: <b id="focus-tree-name">YAMUNA</b></span>
+    <button class="btn-back-full-chart" onclick="clearSubtreeFocus()">← Back to Full Org Chart</button>
+  </div>
+
+  <!-- Dedicated Top-Right Universal Icon Controls (Undo, Redo, Fit to Screen) -->
+  <div id="top-right-bar">
+    <div class="control-group">
+      <button class="btn-top-icon btn-top-undo" id="btn-top-undo" title="Undo (Ctrl+Z)">↩️</button>
+      <button class="btn-top-icon btn-top-redo" id="btn-top-redo" title="Redo (Ctrl+Y)">↪️</button>
+      <button class="btn-top-icon" onclick="fitToScreen()" title="Fit to Screen">🎯</button>
+    </div>
+  </div>
+
+  <!-- Batch Delete Floating Control Bar -->
+  <div id="batch-delete-bar">
+    <span id="batch-selected-count">0 node(s) selected</span>
+    <button class="btn-execute-batch" id="btn-execute-batch-delete">🗑️ Delete Selected</button>
+  </div>
+
+  <!-- Interactive Canvas Wrap -->
+  <div id="canvas-wrap">
+    <div id="canvas">
+      <svg id="lines"></svg>
+    </div>
+  </div>
+
+  <!-- Compact & Streamlined Edit Node Modal -->
+  <div id="panel-overlay" class="modal-overlay">
+    <div id="panel" class="modal-card compact-modal">
+      <div class="modal-header">
+        <h3>Node Details</h3>
+        <button class="btn-close-modal" onclick="closePanel()" title="Close">✕</button>
+      </div>
+
+      <!-- Inputs with no labels above -->
+      <div class="modal-input-group">
+        <input id="f-name" class="uppercase" type="text" placeholder="Name">
+        <input id="f-id" class="uppercase" type="text" placeholder="EMC ID">
+        
+        <select id="f-points" class="panel-select-points" onchange="onModalPointsChange()">
+          <option value="20000">20K</option>
+          <option value="35000">35K</option>
+          <option value="50000">50K</option>
+          <option value="100000">1 LAKH</option>
+          <option value="0">0 PTS</option>
+        </select>
+      </div>
+
+      <!-- Compact Points Summary (A: XXX | B: XXX | Total: XXX) -->
+      <div id="modal-points-breakdown" class="modal-points-breakdown compact">
+        <!-- Dynamically rendered single row: A:XXX B:XXX Total:XXX -->
+      </div>
+
+      <!-- Status (Green / Red Active/Inactive Buttons) -->
+      <div class="modal-section-row">
+        <label class="compact-label">Status</label>
+        <div class="status-btn-group">
+          <button type="button" id="btn-status-active" class="btn-status green active" onclick="setNodeStatus(true)">🟢 Active</button>
+          <button type="button" id="btn-status-inactive" class="btn-status red" onclick="setNodeStatus(false)">🔴 Inactive</button>
+        </div>
+      </div>
+
+      <!-- Branch Position Widget: Circle (A) ⇄ Circle (B) -->
+      <div id="branch-position-wrap" class="modal-section-row">
+        <label class="compact-label">Position</label>
+        <div class="branch-swap-widget" onclick="toggleActiveNodeBranchType()" title="Click to swap branch position (A ⇄ B)">
+          <div id="branch-circle-a" class="branch-circle a active">A</div>
+          <div class="branch-arrow">⇄</div>
+          <div id="branch-circle-b" class="branch-circle b">B</div>
+        </div>
+      </div>
+
+      <!-- Modal Action Buttons -->
+      <div class="panel-btns compact">
+        <button class="btn btn-delete" id="btn-delete" title="Clear text details">Clear</button>
+        <button class="btn btn-cancel" id="btn-cancel">Cancel</button>
+        <button class="btn btn-save" id="btn-save">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Supabase Credentials & SQL Setup Modal -->
+  <div id="supabase-overlay" class="modal-overlay">
+    <div class="modal-card" style="width:460px;">
+      <h3>
+        <span>⚡ Supabase Database Setup</span>
+      </h3>
+      <p style="font-size:12px; color:#6B5B95; margin:4px 0 12px 0;">
+        Enter your Supabase credentials below. Your keys are stored locally in your browser.
+      </p>
+
+      <label>Supabase Project URL</label>
+      <input id="cfg-url" type="text" placeholder="https://your-project.supabase.co">
+
+      <label>Supabase Anon API Key</label>
+      <input id="cfg-key" type="password" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6...">
+
+      <label>Database Setup (Run this in Supabase SQL Editor)</label>
+      <pre class="sql-box" id="sql-code">CREATE TABLE IF NOT EXISTS public.org_nodes (
+    id TEXT PRIMARY KEY,
+    name TEXT DEFAULT '',
+    emp_id TEXT DEFAULT '',
+    is_active BOOLEAN DEFAULT true,
+    parent_id TEXT REFERENCES public.org_nodes(id) ON DELETE CASCADE,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE public.org_nodes ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT true;
+ALTER TABLE public.org_nodes DISABLE ROW LEVEL SECURITY;
+ALTER TABLE public.org_nodes ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Allow public read/write" ON public.org_nodes;
+DROP POLICY IF EXISTS "Allow full access" ON public.org_nodes;
+
+CREATE POLICY "Allow full access" ON public.org_nodes
+    FOR ALL TO public USING (true) WITH CHECK (true);</pre>
+
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-top:6px;">
+        <button class="btn btn-cancel" style="padding:4px 10px; font-size:11px;" onclick="copySQL()">📋 Copy SQL Script</button>
+      </div>
+
+      <div class="panel-btns">
+        <button class="btn btn-cancel" onclick="closeSupabaseModal()">Close</button>
+        <button class="btn btn-save" onclick="saveSupabaseConfig()">Save & Sync</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Notification Toast -->
+  <div id="toast">Toast Message</div>
+
+  <!-- Application Modular JavaScript Files -->
+  <script src="supabase-config.js"></script>
+  <script src="app.js"></script>
+
+</body>
+</html>
