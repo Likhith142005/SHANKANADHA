@@ -447,8 +447,9 @@ function setZoom(newZoom, centerPoint = null) {
   const breadcrumbBar = document.getElementById('focus-breadcrumb-bar');
   const topRightBar = document.getElementById('top-right-bar');
 
-  // Clamp UI scale between 0.5x and 1.8x for comfortable readability
-  const uiScale = Math.min(1.8, Math.max(0.5, currentZoom));
+  const isMobile = window.innerWidth <= 600;
+  // Clamp UI scale: on mobile keep scale bounded (0.7 to 1.1) so controls stay neat and readable
+  const uiScale = isMobile ? Math.min(1.1, Math.max(0.7, currentZoom)) : Math.min(1.8, Math.max(0.5, currentZoom));
 
   if (menuBtn) {
     menuBtn.style.transform = `scale(${uiScale})`;

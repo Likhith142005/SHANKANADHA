@@ -31,6 +31,63 @@ body {
   transform: translateZ(0);
 }
 
+/* Subtree Focus Breadcrumb Bar Default */
+#focus-breadcrumb-bar {
+  position: fixed;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 90;
+  background: #3B2A66;
+  color: #ffffff;
+  padding: 8px 16px;
+  border-radius: 30px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.25);
+  display: none;
+  align-items: center;
+  gap: 12px;
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+/* Mobile Screen Responsiveness (< 600px) */
+@media (max-width: 600px) {
+  #focus-breadcrumb-bar {
+    top: 60px !important;
+    font-size: 11px !important;
+    padding: 6px 12px !important;
+    gap: 8px !important;
+    max-width: 92vw !important;
+    border-radius: 20px !important;
+    white-space: nowrap !important;
+  }
+
+  #focus-breadcrumb-bar button {
+    padding: 4px 8px !important;
+    font-size: 10px !important;
+  }
+
+  .btn-hamburger-toggle {
+    top: 10px !important;
+    left: 10px !important;
+    width: 38px !important;
+    height: 38px !important;
+    font-size: 18px !important;
+  }
+
+  #top-right-bar {
+    top: 10px !important;
+    right: 10px !important;
+  }
+
+  .btn-top-icon {
+    width: 34px !important;
+    height: 34px !important;
+    font-size: 14px !important;
+  }
+}
+
 #canvas-wrap {
   position: relative;
   width: 100vw;
