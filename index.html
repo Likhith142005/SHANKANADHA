@@ -132,15 +132,13 @@
     </div>
   </div>
 
-  <!-- Subtree Focus Breadcrumb Bar -->
-  <div id="focus-breadcrumb-bar">
-    <span>🌿 Isolated View: <b id="focus-tree-name">YAMUNA</b></span>
-    <button class="btn-back-full-chart" onclick="clearSubtreeFocus()">← Back to Full Org Chart</button>
-  </div>
-
-  <!-- Dedicated Top-Right Universal Icon Controls (Undo, Redo, Fit to Screen) -->
+  <!-- Dedicated Top-Right Universal Icon Controls (Subtree Focus Pill, Undo, Redo, Fit to Screen) -->
   <div id="top-right-bar">
     <div class="control-group">
+      <div id="focus-pill-top" class="top-focus-pill" style="display: none;" onclick="clearSubtreeFocus()" title="Click to Exit Isolated View">
+        <span>🌿 <b id="top-focus-tree-name">YAMUNA</b></span>
+        <span class="btn-clear-focus">✕</span>
+      </div>
       <button class="btn-top-icon btn-top-undo" id="btn-top-undo" title="Undo (Ctrl+Z)">↩️</button>
       <button class="btn-top-icon btn-top-redo" id="btn-top-redo" title="Redo (Ctrl+Y)">↪️</button>
       <button class="btn-top-icon" onclick="fitToScreen()" title="Fit to Screen">🎯</button>

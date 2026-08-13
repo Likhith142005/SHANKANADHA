@@ -31,6 +31,48 @@ body {
   transform: translateZ(0);
 }
 
+/* Top-Right Subtree Focus Exit Pill (Beside Undo/Redo/Fit) */
+.top-focus-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #3B2A66;
+  color: #ffffff;
+  padding: 5px 10px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 800;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+  transition: all 0.15s ease;
+  white-space: nowrap;
+  user-select: none;
+}
+
+.top-focus-pill:hover {
+  background: #2B1E4A;
+  transform: scale(1.04);
+}
+
+.top-focus-pill .btn-clear-focus {
+  background: rgba(255,255,255,0.25);
+  color: #ffffff;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 900;
+  margin-left: 2px;
+  transition: background 0.15s ease;
+}
+
+.top-focus-pill:hover .btn-clear-focus {
+  background: #EF4444;
+}
+
 /* Subtree Focus Breadcrumb Bar Default */
 #focus-breadcrumb-bar {
   position: fixed;

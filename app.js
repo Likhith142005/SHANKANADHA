@@ -349,11 +349,11 @@ function setSubtreeFocus(nodeId) {
   focusedRootId = nodeId;
   const focusName = (n.data && n.data.name) ? n.data.name : n.id;
 
-  const breadcrumbBar = document.getElementById('focus-breadcrumb-bar');
-  const breadcrumbName = document.getElementById('focus-tree-name');
-  if (breadcrumbBar && breadcrumbName) {
-    breadcrumbName.textContent = focusName;
-    breadcrumbBar.classList.add('visible');
+  const focusPill = document.getElementById('focus-pill-top');
+  const treeName = document.getElementById('top-focus-tree-name');
+  if (focusPill && treeName) {
+    treeName.textContent = focusName;
+    focusPill.style.display = 'inline-flex';
   }
 
   try {
@@ -370,9 +370,9 @@ function setSubtreeFocus(nodeId) {
 function clearSubtreeFocus() {
   focusedRootId = null;
 
-  const breadcrumbBar = document.getElementById('focus-breadcrumb-bar');
-  if (breadcrumbBar) {
-    breadcrumbBar.classList.remove('visible');
+  const focusPill = document.getElementById('focus-pill-top');
+  if (focusPill) {
+    focusPill.style.display = 'none';
   }
 
   try {
