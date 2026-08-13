@@ -893,13 +893,12 @@ async function syncAllToSupabase() {
 }
 
 // ====== DATA LOADING LOGIC ======
-async function loadData() {
+async function loadData(isSilent = false) {
   if (typeof supabaseClient !== 'undefined' && supabaseClient) {
     try {
       const { data, error } = await supabaseClient.from('org_nodes').select('*');
       if (error) {
-        console.error('Supabase fetch error:', error);
-        showToast('Supabase Error: ' + error.message);
+        if (!isSilent) showToast('Supabase Error: ' + error.message);
         return;
       }
 
@@ -956,10 +955,10 @@ async function loadData() {
           saveLocalCache();
           checkUrlFocusParam();
           renderAll();
-          showToast('Loaded live data from Supabase!');
+          if (!isSilent) showToast('Loaded live data from Supabase!');
           return;
         }
-      } else {
+      } else if (!isSilent) {
         showToast('Saving initial Org Chart to Supabase cloud...');
         await seedStaticDataToSupabase();
         renderAll();
@@ -967,9 +966,25 @@ async function loadData() {
       }
     } catch (e) {
       console.error('Failed to load from Supabase:', e);
-      showToast('Connection error. Displaying local cache.');
+      if (!isSilent) showToast('Connection error. Displaying local cache.');
     }
   }
+
+  if (Object.keys(nodes).length === 0) {
+    if (!loadLocalCache()) {
+      loadStaticData();
+    }
+  }
+}
+
+// Background Auto-Sync Polling (Guarantees Mobile & Laptop sync every 3s)
+setInterval(() => {
+  const panel = document.getElementById('panel');
+  const isEditing = panel && panel.classList.contains('active');
+  if (!isEditing && typeof supabaseClient !== 'undefined' && supabaseClient) {
+    loadData(true);
+  }
+}, 3000);
 
   if (Object.keys(nodes).length === 0) {
     if (!loadLocalCache()) {
