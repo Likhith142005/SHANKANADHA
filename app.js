@@ -986,15 +986,6 @@ setInterval(() => {
   }
 }, 3000);
 
-  if (Object.keys(nodes).length === 0) {
-    if (!loadLocalCache()) {
-      loadStaticData();
-    }
-  }
-  checkUrlFocusParam();
-  renderAll();
-}
-
 async function seedStaticDataToSupabase() {
   loadStaticData();
   saveLocalCache();
