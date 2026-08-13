@@ -441,6 +441,30 @@ function setZoom(newZoom, centerPoint = null) {
   if (zoomBadge) {
     zoomBadge.textContent = Math.round(currentZoom * 100) + '%';
   }
+
+  // Synchronize scale of top floating controls with canvas zoom level
+  const menuBtn = document.getElementById('btn-hamburger-menu');
+  const breadcrumbBar = document.getElementById('focus-breadcrumb-bar');
+  const topRightBar = document.getElementById('top-right-bar');
+
+  // Clamp UI scale between 0.5x and 1.8x for comfortable readability
+  const uiScale = Math.min(1.8, Math.max(0.5, currentZoom));
+
+  if (menuBtn) {
+    menuBtn.style.transform = `scale(${uiScale})`;
+    menuBtn.style.transformOrigin = 'top left';
+    menuBtn.style.transition = 'transform 0.15s ease';
+  }
+  if (topRightBar) {
+    topRightBar.style.transform = `scale(${uiScale})`;
+    topRightBar.style.transformOrigin = 'top right';
+    topRightBar.style.transition = 'transform 0.15s ease';
+  }
+  if (breadcrumbBar) {
+    breadcrumbBar.style.transform = `translateX(-50%) scale(${uiScale})`;
+    breadcrumbBar.style.transformOrigin = 'top center';
+    breadcrumbBar.style.transition = 'transform 0.15s ease';
+  }
 }
 
 function zoomIn() { setZoom(currentZoom + 0.15); }
