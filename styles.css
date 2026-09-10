@@ -137,6 +137,7 @@ body {
   overflow: auto;
   cursor: grab;
   scroll-behavior: auto;
+  touch-action: none; /* Prevent native touch scroll conflicts */
 }
 
 #canvas-wrap.panning {
