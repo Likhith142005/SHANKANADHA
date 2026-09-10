@@ -133,10 +133,10 @@ body {
 #canvas-wrap {
   position: relative;
   width: 100vw;
-  height: 100dvh; /* Fixes mobile URL bar jump glitch */
+  height: 100vh;
   overflow: auto;
-  overscroll-behavior: none; /* Prevents mobile pull-to-refresh bounce glitch */
   cursor: grab;
+  scroll-behavior: auto;
 }
 
 #canvas-wrap.panning {
