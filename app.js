@@ -681,8 +681,10 @@ function initCanvasPanAndScroll() {
     setZoom(currentZoom * zoomFactor, { x: e.clientX, y: e.clientY });
   }, { passive: false });
 
-  wrap.addEventListener('mousedown', (e) => {
+  wrap.addEventListener('pointerdown', (e) => {
+    if (e.pointerType !== 'mouse') return; // Allow native scrolling for touch devices
     if (e.button !== 0) return;
+    
     if (e.target.closest('#panel') || e.target.closest('#unified-menu-drawer') || e.target.closest('#top-right-bar') || e.target.closest('#batch-delete-bar') || e.target.closest('#supabase-overlay') || e.target.closest('#btn-hamburger-menu') || e.target.closest('#focus-breadcrumb-bar')) {
       return;
     }
@@ -696,7 +698,8 @@ function initCanvasPanAndScroll() {
     wrap.classList.add('panning');
   });
 
-  window.addEventListener('mousemove', (e) => {
+  window.addEventListener('pointermove', (e) => {
+    if (e.pointerType !== 'mouse') return;
     if (!isPanning) return;
     const dx = e.clientX - startX;
     const dy = e.clientY - startY;
@@ -705,7 +708,8 @@ function initCanvasPanAndScroll() {
     wrap.scrollTop = startScrollTop - dy;
   });
 
-  window.addEventListener('mouseup', () => {
+  window.addEventListener('pointerup', (e) => {
+    if (e.pointerType !== 'mouse') return;
     if (isPanning) {
       isPanning = false;
       wrap.classList.remove('panning');
