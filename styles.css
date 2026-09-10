@@ -255,6 +255,22 @@ svg#lines {
   border-color: #FFB5B5;
 }
 
+/* Blank placeholder for 3-level focus mode */
+.node.box.empty-placeholder {
+  background: #F9F8FE;
+  border: 2.5px dashed #B8A9D8;
+  box-shadow: none;
+  cursor: default;
+}
+.node.box.empty-placeholder:hover {
+  transform: none;
+}
+.node.box.empty-placeholder .box-name {
+  color: #8C7AA9 !important;
+  font-size: 22px !important;
+  opacity: 0.8;
+}
+
 .node.box .box-name {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif !important;
   font-weight: 900 !important;

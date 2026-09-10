@@ -74,6 +74,8 @@ function updateSizingUI() {
   const badgeSub = document.getElementById('badge-experimental-sizing');
   const btnLvl = document.getElementById('btn-experimental-level-sizing');
   const badgeLvl = document.getElementById('badge-experimental-level-sizing');
+  const btn3Lvl = document.getElementById('btn-experimental-3level');
+  const badge3Lvl = document.getElementById('badge-experimental-3level');
 
   if (btnSub && badgeSub) {
     const isSub = (sizingMode === 'subtree');
@@ -87,8 +89,15 @@ function updateSizingUI() {
     badgeLvl.textContent = isLvl ? 'ON' : 'OFF';
   }
 
+  if (btn3Lvl && badge3Lvl) {
+    const is3Lvl = (sizingMode === 'focus_3_level');
+    btn3Lvl.className = is3Lvl ? 'btn-drawer-action purple active-mode' : 'btn-drawer-action purple';
+    badge3Lvl.textContent = is3Lvl ? 'ON' : 'OFF';
+  }
+
   if (sizingMode === 'subtree') showToast('🧪 Dynamic Subtree Sizing turned ON!');
   else if (sizingMode === 'level') showToast('📊 Equal Level-Depth Sizing turned ON!');
+  else if (sizingMode === 'focus_3_level') showToast('🔍 3-Level Dynamic Focus turned ON!');
   else showToast('Uniform Standard Sizing active');
 }
 
@@ -186,7 +195,7 @@ function toggleInactiveListCollapse() {
 
 function updateInactiveCount() {
   const badgeCount = document.getElementById('badge-inactive-count');
-  const inactiveNodes = Object.values(nodes).filter(n => n.data && n.data.isActive === false);
+  const inactiveNodes = Object.values(nodes).filter(n => n.data && n.data.isActive === false && !n.isFake);
   const count = inactiveNodes.length;
 
   if (badgeCount) {
@@ -199,7 +208,7 @@ function renderInactiveNodesList() {
   if (!listContainer) return;
 
   listContainer.innerHTML = '';
-  const inactiveNodes = Object.values(nodes).filter(n => n.data && n.data.isActive === false);
+  const inactiveNodes = Object.values(nodes).filter(n => n.data && n.data.isActive === false && !n.isFake);
   updateInactiveCount();
 
   if (inactiveNodes.length === 0) {
@@ -1170,17 +1179,86 @@ function computeLayout() {
   });
 }
 
+let currentFakeNodesCleanup = [];
+let currentHiddenChildrenRestores = [];
+
+function apply3LevelFocusLogic(effectiveRoot) {
+  cleanup3LevelFocusLogic(); // Ensure clean state
+  let fakes = [];
+  let hidden = [];
+  
+  function traverse(id, currentDepth) {
+    const n = nodes[id];
+    if (!n) return;
+    
+    if (currentDepth >= 3) {
+      if (n.children && n.children.length > 0) {
+        hidden.push({ parent: n, origChildren: [...n.children] });
+        n.children = [];
+      }
+      return;
+    }
+    
+    const childA = n.children.find(cid => nodes[cid] && nodes[cid].branchType === 'A');
+    if (!childA) {
+      const fakeA = 'fake_' + id + '_A';
+      nodes[fakeA] = { id: fakeA, parent: id, children: [], branchType: 'A', data: { name: 'Empty Slot', empId: '', isActive: false }, isFake: true };
+      n.children.push(fakeA);
+      fakes.push({ parent: n, fakeId: fakeA });
+      traverse(fakeA, currentDepth + 1);
+    } else {
+      traverse(childA, currentDepth + 1);
+    }
+    
+    const childB = n.children.find(cid => nodes[cid] && nodes[cid].branchType === 'B');
+    if (!childB) {
+      const fakeB = 'fake_' + id + '_B';
+      nodes[fakeB] = { id: fakeB, parent: id, children: [], branchType: 'B', data: { name: 'Empty Slot', empId: '', isActive: false }, isFake: true };
+      n.children.push(fakeB);
+      fakes.push({ parent: n, fakeId: fakeB });
+      traverse(fakeB, currentDepth + 1);
+    } else {
+      traverse(childB, currentDepth + 1);
+    }
+  }
+  
+  if (effectiveRoot) traverse(effectiveRoot, 0);
+  currentFakeNodesCleanup = fakes;
+  currentHiddenChildrenRestores = hidden;
+}
+
+function cleanup3LevelFocusLogic() {
+  currentHiddenChildrenRestores.forEach(h => {
+    if (h.parent) h.parent.children = h.origChildren;
+  });
+  currentHiddenChildrenRestores = [];
+  
+  currentFakeNodesCleanup.forEach(f => {
+    if (f.parent) f.parent.children = f.parent.children.filter(cid => cid !== f.fakeId);
+    delete nodes[f.fakeId];
+  });
+  currentFakeNodesCleanup = [];
+}
+
 function renderAll() {
   const wrap = document.getElementById('canvas-wrap');
   const savedScrollLeft = wrap ? wrap.scrollLeft : 0;
   const savedScrollTop = wrap ? wrap.scrollTop : 0;
+
+  const preEffectiveRoot = (focusedRootId && nodes[focusedRootId]) ? focusedRootId : rootId;
+  if (sizingMode === 'focus_3_level' && preEffectiveRoot) {
+    apply3LevelFocusLogic(preEffectiveRoot);
+  }
 
   computeLayout();
   updateInactiveCount();
 
   const canvas = document.getElementById('canvas');
   const svg = document.getElementById('lines');
-  if(!canvas || !svg) return;
+  if(!canvas || !svg) {
+    cleanup3LevelFocusLogic();
+    return;
+  }
 
   const effectiveRoot = (focusedRootId && nodes[focusedRootId]) ? focusedRootId : rootId;
   const activeSubtreeIds = new Set(getSubtreeIds(effectiveRoot));
@@ -1259,6 +1337,8 @@ function renderAll() {
     wrap.scrollLeft = savedScrollLeft;
     wrap.scrollTop = savedScrollTop;
   }
+
+  cleanup3LevelFocusLogic();
 }
 
 // ====== POINTS & SUBTREE CUMULATIVE SUM ALGORITHM ======
@@ -1331,6 +1411,7 @@ function renderNode(n) {
   const extraInactiveClass = isNodeActive ? '' : ' inactive-node';
 
   el.className = 'node box' + extraDeleteClass + extraSelectedClass + extraInactiveClass;
+  if (n.isFake) el.className += ' empty-placeholder';
   el.style.width = dims.width + 'px';
   el.style.height = dims.height + 'px';
   el.style.minHeight = dims.height + 'px';
@@ -1378,19 +1459,21 @@ function renderNode(n) {
   statusDot.className = 'box-status-dot ' + (isNodeActive ? 'active' : 'inactive');
   statusDot.title = isNodeActive ? 'ID Active (Click to set Red/Inactive)' : 'ID Inactive (Click to set Green/Active)';
   
-  statusDot.addEventListener('click', (e) => {
-    e.stopPropagation();
-    pushHistoryState(`Status toggle for "${nodeName || n.id}"`);
-    const newStatus = !isNodeActive;
-    n.data.isActive = newStatus;
-    saveLocalCache();
-    renderAll();
-    syncAllToSupabase();
-    showToast(newStatus ? `🟢 ${nodeName || n.id} is now Active!` : `🔴 ${nodeName || n.id} is now Inactive!`);
-  });
-  el.appendChild(statusDot);
+  if (!n.isFake) {
+    statusDot.addEventListener('click', (e) => {
+      e.stopPropagation();
+      pushHistoryState(`Status toggle for "${nodeName || n.id}"`);
+      const newStatus = !isNodeActive;
+      n.data.isActive = newStatus;
+      saveLocalCache();
+      renderAll();
+      syncAllToSupabase();
+      showToast(newStatus ? `🟢 ${nodeName || n.id} is now Active!` : `🔴 ${nodeName || n.id} is now Inactive!`);
+    });
+    el.appendChild(statusDot);
+  }
 
-  if (n.children.length < 2) {
+  if (!n.isFake && n.children.length < 2) {
     const hasChildA = n.children.some(cid => nodes[cid] && nodes[cid].branchType === 'A');
     const hasChildB = n.children.some(cid => nodes[cid] && nodes[cid].branchType === 'B');
 
@@ -1411,6 +1494,13 @@ function renderNode(n) {
 
   el.addEventListener('click', (e) => {
     e.stopPropagation();
+    if (n.isFake) return; // Do nothing for empty placeholders
+    
+    if (sizingMode === 'focus_3_level') {
+      setSubtreeFocus(n.id);
+      return;
+    }
+
     if (isMultiSelectModeActive) {
       handleNodeClickInMultiSelectMode(n.id);
     } else if (isDeleteModeActive) {
