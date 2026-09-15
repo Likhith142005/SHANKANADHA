@@ -51,7 +51,22 @@ let selectedNodeIds = new Set();
 let isFirstLoad = true;
 
 // ====== SUBTREE ISOLATED FOCUS STATE ======
-let focusedRootId = null; // null = full org chart; string nodeId = focused sub-tree
+let focusedRootId = null;   // null = full org chart; string nodeId = focused sub-tree
+let focusedRootName = null; // Persists focus across Supabase reloads (search by name)
+
+// Resolve focusedRootId from name — called at top of renderAll so stale IDs auto-heal
+function resolveFocusedRootId() {
+  if (!focusedRootName) return;
+  const target = Object.values(nodes).find(
+    n => n.data && n.data.name && n.data.name.trim().toUpperCase() === focusedRootName.toUpperCase()
+  );
+  if (target) {
+    focusedRootId = target.id;
+  } else {
+    focusedRootId = null;
+    focusedRootName = null;
+  }
+}
 
 // ====== EXPERIMENTAL FEATURES: SIZING MODES ======
 // sizingMode: 'off' | 'subtree' | 'level'
@@ -357,6 +372,7 @@ function setSubtreeFocus(nodeId) {
 
   focusedRootId = nodeId;
   const focusName = (n.data && n.data.name) ? n.data.name : n.id;
+  focusedRootName = focusName.trim().toUpperCase(); // Persist by name
 
   const focusPill = document.getElementById('focus-pill-top');
   const treeName = document.getElementById('top-focus-tree-name');
@@ -378,6 +394,7 @@ function setSubtreeFocus(nodeId) {
 
 function clearSubtreeFocus() {
   focusedRootId = null;
+  focusedRootName = null; // Clear name persistence
 
   const focusPill = document.getElementById('focus-pill-top');
   if (focusPill) {
@@ -398,11 +415,11 @@ function clearSubtreeFocus() {
 
 // ====== AUTO-FOCUS YAMUNA ON INITIAL LOAD ======
 function focusYamunaOnInit() {
+  focusedRootName = 'YAMUNA'; // Always persist by name so it survives Supabase reload
   const yamunaNode = Object.values(nodes).find(
     n => n.data && n.data.name && n.data.name.trim().toUpperCase() === 'YAMUNA'
   );
   if (yamunaNode && yamunaNode.id !== rootId) {
-    // Set focusedRootId directly without toast/URL push to keep it silent
     focusedRootId = yamunaNode.id;
     const focusPill = document.getElementById('focus-pill-top');
     const treeName = document.getElementById('top-focus-tree-name');
@@ -1230,31 +1247,14 @@ function apply3LevelFocusLogic(effectiveRoot) {
       return;
     }
     
-    const childA = n.children.find(cid => nodes[cid] && nodes[cid].branchType === 'A');
-    if (!childA) {
-      const fakeA = 'fake_' + id + '_A';
-      nodes[fakeA] = { id: fakeA, parent: id, children: [], branchType: 'A', data: { name: 'Empty Slot', empId: '', isActive: false }, isFake: true };
-      n.children.push(fakeA);
-      fakes.push({ parent: n, fakeId: fakeA });
-      traverse(fakeA, currentDepth + 1);
-    } else {
-      traverse(childA, currentDepth + 1);
-    }
-    
-    const childB = n.children.find(cid => nodes[cid] && nodes[cid].branchType === 'B');
-    if (!childB) {
-      const fakeB = 'fake_' + id + '_B';
-      nodes[fakeB] = { id: fakeB, parent: id, children: [], branchType: 'B', data: { name: 'Empty Slot', empId: '', isActive: false }, isFake: true };
-      n.children.push(fakeB);
-      fakes.push({ parent: n, fakeId: fakeB });
-      traverse(fakeB, currentDepth + 1);
-    } else {
-      traverse(childB, currentDepth + 1);
+    // Traverse all real children — no fake empty slots created
+    if (n.children) {
+      n.children.forEach(cid => { if (nodes[cid]) traverse(cid, currentDepth + 1); });
     }
   }
-  
+
   if (effectiveRoot) traverse(effectiveRoot, 0);
-  currentFakeNodesCleanup = fakes;
+  currentFakeNodesCleanup = []; // No fake nodes in this mode
   currentHiddenChildrenRestores = hidden;
 }
 
@@ -1271,7 +1271,20 @@ function cleanup3LevelFocusLogic() {
   currentFakeNodesCleanup = [];
 }
 
+// ====== SVG HELPER: draw a line ======
+function svgLine(svg, x1, y1, x2, y2, color = '#9B8AC4', width = 3) {
+  const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+  line.setAttribute('x1', x1); line.setAttribute('y1', y1);
+  line.setAttribute('x2', x2); line.setAttribute('y2', y2);
+  line.setAttribute('stroke', color);
+  line.setAttribute('stroke-width', width);
+  svg.appendChild(line);
+}
+
 function renderAll() {
+  // Heal stale focusedRootId after Supabase data reload
+  resolveFocusedRootId();
+
   const wrap = document.getElementById('canvas-wrap');
   const savedScrollLeft = wrap ? wrap.scrollLeft : 0;
   const savedScrollTop = wrap ? wrap.scrollTop : 0;
@@ -1314,44 +1327,72 @@ function renderAll() {
   canvas.querySelectorAll('.node').forEach(e => e.remove());
   svg.innerHTML = '';
 
-  // ====== CONNECTOR LINES WITH BIG A & B LOGOS ======
+  // ====== GENEALOGY BRACKET CONNECTORS ======
+  // Group real children by parent
+  const parentToChildren = {};
   Object.values(nodes).forEach(n => {
+    if (n.isFake) return;
     if (activeSubtreeIds.has(n.id) && n.parent && nodes[n.parent] && activeSubtreeIds.has(n.parent)) {
-      const p = nodes[n.parent];
-      const pDims = getNodeDimensions(p);
-      const nDims = getNodeDimensions(n);
+      if (!parentToChildren[n.parent]) parentToChildren[n.parent] = [];
+      parentToChildren[n.parent].push(n);
+    }
+  });
 
-      if (isNaN(p.x) || isNaN(p.y) || isNaN(n.x) || isNaN(n.y)) return;
+  Object.entries(parentToChildren).forEach(([parentId, children]) => {
+    const p = nodes[parentId];
+    if (!p || isNaN(p.x) || isNaN(p.y)) return;
+    const pDims = getNodeDimensions(p);
+    const parentBotX = p.x;
+    const parentBotY = p.y + pDims.height / 2;
 
-      const pX = p.x;
-      const pY = p.y + pDims.height / 2;
-      const cX = n.x;
-      const cY = n.y - nDims.height / 2;
+    // Sort children left-to-right
+    children.sort((a, b) => a.x - b.x);
 
-      const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-      line.setAttribute('x1', pX);
-      line.setAttribute('y1', pY);
-      line.setAttribute('x2', cX);
-      line.setAttribute('y2', cY);
-      line.setAttribute('stroke', '#9B8AC4');
-      line.setAttribute('stroke-width', '3');
-      svg.appendChild(line);
+    const firstChild = children[0];
+    const firstDims = getNodeDimensions(firstChild);
+    const childTopY = firstChild.y - firstDims.height / 2;
 
-      const branchLetter = (n.branchType === 'B') ? 'B' : 'A';
-      const isLeft = (branchLetter === 'A');
+    // midY = junction point between parent and children
+    const midY = parentBotY + (childTopY - parentBotY) * 0.45;
 
+    if (children.length === 1) {
+      // Single child: straight vertical line
+      const c = children[0];
+      const cDims = getNodeDimensions(c);
+      svgLine(svg, parentBotX, parentBotY, c.x, c.y - cDims.height / 2);
+    } else {
+      // Multiple children: bracket pattern
+      const leftX  = children[0].x;
+      const rightX = children[children.length - 1].x;
+
+      // Vertical stem from parent down to bracket bar
+      svgLine(svg, parentBotX, parentBotY, parentBotX, midY);
+      // Horizontal bracket bar across all children
+      svgLine(svg, leftX, midY, rightX, midY);
+      // Vertical drop from bracket bar to each child
+      children.forEach(child => {
+        const cDims = getNodeDimensions(child);
+        svgLine(svg, child.x, midY, child.x, child.y - cDims.height / 2);
+      });
+    }
+
+    // A / B branch labels at mid-point on each child's stem
+    children.forEach(child => {
+      const cDims = getNodeDimensions(child);
+      const stemTopY  = (children.length === 1) ? parentBotY : midY;
+      const stemBotY  = child.y - cDims.height / 2;
+      const labelY    = stemTopY + (stemBotY - stemTopY) * 0.5;
+      const branchLetter = (child.branchType === 'B') ? 'B' : 'A';
       const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-      const midX = (pX + cX) / 2;
-      const midY = (pY + cY) / 2;
-      label.setAttribute('x', midX + (isLeft ? -18 : 18));
-      label.setAttribute('y', midY);
+      label.setAttribute('x', child.x + (branchLetter === 'A' ? -18 : 18));
+      label.setAttribute('y', labelY);
       label.setAttribute('text-anchor', 'middle');
       label.setAttribute('font-size', '60');
       label.setAttribute('font-weight', '900');
       label.setAttribute('fill', '#3B2A66');
       label.textContent = branchLetter;
       svg.appendChild(label);
-    }
+    });
   });
 
   Object.values(nodes).forEach(n => {
@@ -2180,13 +2221,15 @@ function initApp() {
   }
   loadUndoRedoHistory();
 
-  // Check if a focus param is in the URL; otherwise auto-focus YAMUNA
+  // Always persist YAMUNA as the intended focus target by name
+  // resolveFocusedRootId() inside renderAll will translate name → ID each time
   const urlParams = new URLSearchParams(window.location.search);
   const hasFocusParam = urlParams.get('focus') || urlParams.get('focusId');
   if (hasFocusParam) {
     checkUrlFocusParam();
   } else {
-    // Focus YAMUNA silently before first render
+    // Set name-based focus to YAMUNA so it survives Supabase ID changes
+    focusedRootName = 'YAMUNA';
     const yamunaNode = Object.values(nodes).find(
       n => n.data && n.data.name && n.data.name.trim().toUpperCase() === 'YAMUNA'
     );
