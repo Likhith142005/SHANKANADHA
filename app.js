@@ -127,7 +127,8 @@ function getSubtreeDepthFromBottom(nodeId) {
 }
 
 function getNodeDimensions(n) {
-  if (!n || sizingMode === 'off') {
+  // 'off' and 'focus_3_level' both use uniform standard box sizing
+  if (!n || sizingMode === 'off' || sizingMode === 'focus_3_level') {
     return { width: BOX_W, height: BOX_H, fontSize: 30 };
   }
 
@@ -145,6 +146,9 @@ function getNodeDimensions(n) {
     width = Math.max(250, 460 - depth * 55);
     height = Math.max(105, 180 - depth * 18);
     targetFontSize = Math.max(22, 42 - depth * 5);
+  } else {
+    // Fallback for any unrecognized mode
+    return { width: BOX_W, height: BOX_H, fontSize: 30 };
   }
 
   // Auto-fit font size based on text character length so names fit perfectly inside box
