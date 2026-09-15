@@ -194,13 +194,168 @@ body {
   -webkit-text-size-adjust: 100%;
 }
 
-.btn-hamburger-toggle, #top-right-bar {
-  touch-action: none;
-  -webkit-transform: translateZ(0);
-  transform: translateZ(0);
+/* ====== FIXED STATIC TOP TASKBAR HEADER ====== */
+#top-taskbar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 56px;
+  background: rgba(26, 15, 53, 0.94);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 2px solid rgba(124, 92, 191, 0.3);
+  z-index: 900;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
+  user-select: none;
 }
 
-/* Top-Right Subtree Focus Exit Pill (Beside Undo/Redo/Fit) */
+.taskbar-left,
+.taskbar-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.taskbar-center {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  max-width: 450px;
+  margin: 0 16px;
+}
+
+/* Taskbar Action Button (Strict Static Dimensions) */
+.taskbar-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1.5px solid rgba(255, 255, 255, 0.18);
+  color: #ffffff;
+  font-size: 18px;
+  font-weight: 800;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+  outline: none;
+}
+
+.taskbar-btn:hover {
+  background: rgba(124, 92, 191, 0.6);
+  border-color: rgba(255, 255, 255, 0.4);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(124, 92, 191, 0.4);
+}
+
+.taskbar-btn:active {
+  transform: translateY(0);
+}
+
+.taskbar-btn.active-mode {
+  background: #7C5CBF;
+  border-color: #A78BFA;
+  box-shadow: 0 0 12px rgba(124, 92, 191, 0.8);
+}
+
+/* Zoom Drag Slider Container */
+.zoom-slider-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1.5px solid rgba(255, 255, 255, 0.14);
+  padding: 5px 14px;
+  border-radius: 30px;
+  width: 100%;
+  backdrop-filter: blur(8px);
+}
+
+.zoom-icon {
+  color: #D8CFF0;
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+  user-select: none;
+  transition: color 0.15s ease;
+}
+
+.zoom-icon:hover {
+  color: #ffffff;
+}
+
+/* Styled Drag Slider */
+#zoom-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  flex: 1;
+  height: 6px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.22);
+  outline: none;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+#zoom-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #ffffff;
+  border: 2px solid #7C5CBF;
+  cursor: grab;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+  transition: transform 0.15s ease, background 0.15s ease;
+}
+
+#zoom-slider::-webkit-slider-thumb:hover {
+  transform: scale(1.2);
+  background: #E6E0F8;
+}
+
+#zoom-slider::-webkit-slider-thumb:active {
+  cursor: grabbing;
+  transform: scale(1.05);
+}
+
+#zoom-slider::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #ffffff;
+  border: 2px solid #7C5CBF;
+  cursor: grab;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+}
+
+.zoom-badge-pill {
+  background: #7C5CBF;
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 900;
+  padding: 3px 8px;
+  border-radius: 12px;
+  cursor: pointer;
+  min-width: 44px;
+  text-align: center;
+  transition: background 0.15s ease, transform 0.15s ease;
+}
+
+.zoom-badge-pill:hover {
+  background: #5C3FA0;
+  transform: scale(1.05);
+}
+
+/* Top-Right Subtree Focus Exit Pill */
 .top-focus-pill {
   display: inline-flex;
   align-items: center;
@@ -242,60 +397,48 @@ body {
   background: #EF4444;
 }
 
-/* Subtree Focus Breadcrumb Bar Default */
-#focus-breadcrumb-bar {
-  position: fixed;
-  top: 12px;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 90;
-  background: #3B2A66;
-  color: #ffffff;
-  padding: 8px 16px;
-  border-radius: 30px;
-  box-shadow: 0 4px 16px rgba(0,0,0,0.25);
-  display: none;
-  align-items: center;
-  gap: 12px;
-  font-size: 13px;
-  font-weight: 700;
-  white-space: nowrap;
+/* Canvas wrap padding top to offset static fixed taskbar */
+#canvas-wrap {
+  padding-top: 56px;
 }
 
 /* Mobile Screen Responsiveness (< 600px) */
 @media (max-width: 600px) {
-  #focus-breadcrumb-bar {
-    top: 60px !important;
-    font-size: 11px !important;
-    padding: 6px 12px !important;
-    gap: 8px !important;
-    max-width: 92vw !important;
-    border-radius: 20px !important;
-    white-space: nowrap !important;
+  #top-taskbar {
+    height: 50px;
+    padding: 0 8px;
   }
 
-  #focus-breadcrumb-bar button {
-    padding: 4px 8px !important;
-    font-size: 10px !important;
+  .taskbar-btn {
+    width: 34px;
+    height: 34px;
+    font-size: 15px;
+    border-radius: 10px;
   }
 
-  .btn-hamburger-toggle {
-    top: 10px !important;
-    left: 10px !important;
-    width: 38px !important;
-    height: 38px !important;
-    font-size: 18px !important;
+  .taskbar-left,
+  .taskbar-right {
+    gap: 6px;
   }
 
-  #top-right-bar {
-    top: 10px !important;
-    right: 10px !important;
+  .taskbar-center {
+    margin: 0 6px;
+    max-width: 180px;
   }
 
-  .btn-top-icon {
-    width: 34px !important;
-    height: 34px !important;
-    font-size: 14px !important;
+  .zoom-slider-wrap {
+    padding: 3px 8px;
+    gap: 6px;
+  }
+
+  .zoom-icon {
+    font-size: 11px;
+  }
+
+  .zoom-badge-pill {
+    font-size: 10px;
+    padding: 2px 5px;
+    min-width: 36px;
   }
 }
 

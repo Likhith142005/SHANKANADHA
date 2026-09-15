@@ -2,28 +2,37 @@
 // ORG CHART CORE APPLICATION LOGIC & SUPABASE DUAL-PERSISTENCE
 // ================================================================
 
-let BOX_W = 320;
-let BOX_H = 150;
-let LEVEL_GAP = 160;
-let LEAF_GAP = 60;
-let isMobileView = false;
+let BOX_W = 160;
+let BOX_H = 80;
+let LEVEL_GAP = 80;
+let LEAF_GAP = 30;
+let isMobileView = true;
 
 function toggleMobileView() {
   isMobileView = !isMobileView;
+  const btnToggle = document.getElementById('btn-device-toggle');
   if (isMobileView) {
     BOX_W = 160;
     BOX_H = 80;
     LEVEL_GAP = 80;
     LEAF_GAP = 30;
     document.body.classList.add('mobile-view');
-    showToast('📱 Switched to Mobile Layout');
+    if (btnToggle) {
+      btnToggle.textContent = '📱';
+      btnToggle.title = 'Current: Mobile View (Click for Desktop Site)';
+    }
+    showToast('📱 Switched to Mobile View');
   } else {
     BOX_W = 320;
     BOX_H = 150;
     LEVEL_GAP = 160;
     LEAF_GAP = 60;
     document.body.classList.remove('mobile-view');
-    showToast('💻 Switched to Desktop Layout');
+    if (btnToggle) {
+      btnToggle.textContent = '💻';
+      btnToggle.title = 'Current: Desktop View (Click for Mobile Site)';
+    }
+    showToast('💻 Switched to Desktop Site');
   }
   
   // Re-layout and scale appropriately
@@ -204,6 +213,7 @@ function updateSizingUI() {
   const badgeLvl = document.getElementById('badge-experimental-level-sizing');
   const btn3Lvl = document.getElementById('btn-experimental-3level');
   const badge3Lvl = document.getElementById('badge-experimental-3level');
+  const btnTop3Lvl = document.getElementById('btn-3level-toggle');
 
   if (btnSub && badgeSub) {
     const isSub = (sizingMode === 'subtree');
@@ -217,15 +227,18 @@ function updateSizingUI() {
     badgeLvl.textContent = isLvl ? 'ON' : 'OFF';
   }
 
+  const is3Lvl = (sizingMode === 'focus_3_level');
   if (btn3Lvl && badge3Lvl) {
-    const is3Lvl = (sizingMode === 'focus_3_level');
     btn3Lvl.className = is3Lvl ? 'btn-drawer-action purple active-mode' : 'btn-drawer-action purple';
     badge3Lvl.textContent = is3Lvl ? 'ON' : 'OFF';
+  }
+  if (btnTop3Lvl) {
+    btnTop3Lvl.className = is3Lvl ? 'taskbar-btn active-mode' : 'taskbar-btn';
   }
 
   if (sizingMode === 'subtree') showToast('🧪 Dynamic Subtree Sizing turned ON!');
   else if (sizingMode === 'level') showToast('📊 Equal Level-Depth Sizing turned ON!');
-  else if (sizingMode === 'focus_3_level') showToast('🔍 3-Level Dynamic Focus turned ON!');
+  else if (sizingMode === 'focus_3_level') showToast('⚡ 3-Level Dynamic Focus turned ON!');
   else showToast('Uniform Standard Sizing active');
 }
 
@@ -612,30 +625,16 @@ function setZoom(newZoom, centerPoint = null) {
     zoomBadge.textContent = Math.round(currentZoom * 100) + '%';
   }
 
-  // Synchronize scale of top floating controls with canvas zoom level
-  const menuBtn = document.getElementById('btn-hamburger-menu');
-  const breadcrumbBar = document.getElementById('focus-breadcrumb-bar');
-  const topRightBar = document.getElementById('top-right-bar');
+  const slider = document.getElementById('zoom-slider');
+  if (slider) {
+    // Map currentZoom (e.g. 0.1 to 2.0) to slider range 1..200
+    slider.value = Math.min(200, Math.max(1, Math.round(currentZoom * 100)));
+  }
+}
 
-  const isMobile = window.innerWidth <= 600;
-  // Clamp UI scale: on mobile keep scale bounded (0.7 to 1.1) so controls stay neat and readable
-  const uiScale = isMobile ? Math.min(1.1, Math.max(0.7, currentZoom)) : Math.min(1.8, Math.max(0.5, currentZoom));
-
-  if (menuBtn) {
-    menuBtn.style.transform = `scale(${uiScale})`;
-    menuBtn.style.transformOrigin = 'top left';
-    menuBtn.style.transition = 'transform 0.15s ease';
-  }
-  if (topRightBar) {
-    topRightBar.style.transform = `scale(${uiScale})`;
-    topRightBar.style.transformOrigin = 'top right';
-    topRightBar.style.transition = 'transform 0.15s ease';
-  }
-  if (breadcrumbBar) {
-    breadcrumbBar.style.transform = `translateX(-50%) scale(${uiScale})`;
-    breadcrumbBar.style.transformOrigin = 'top center';
-    breadcrumbBar.style.transition = 'transform 0.15s ease';
-  }
+function onZoomSliderInput(val) {
+  const targetZoom = parseFloat(val) / 100;
+  setZoom(targetZoom);
 }
 
 function zoomIn() { setZoom(currentZoom + 0.15); }
@@ -2426,9 +2425,12 @@ function initApp() {
   initSecurityProtections();
   checkLoginSession();
 
-  // Auto detect mobile device wrapper sizing
-  if (window.innerWidth <= 600) {
-    toggleMobileView(); // Sets to true
+  // Set default view to mobile view
+  document.body.classList.add('mobile-view');
+  const btnDeviceToggle = document.getElementById('btn-device-toggle');
+  if (btnDeviceToggle) {
+    btnDeviceToggle.textContent = '📱';
+    btnDeviceToggle.title = 'Current: Mobile View (Click for Desktop Site)';
   }
 
   // If already authenticated on page refresh → show team selector greeting
