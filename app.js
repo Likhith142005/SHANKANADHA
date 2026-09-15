@@ -577,8 +577,8 @@ function checkUrlFocusParam() {
 
 // ====== SILKY SMOOTH ZOOM SYSTEM ======
 let currentZoom = 1.0;
-const MIN_ZOOM = 0.05;
-const MAX_ZOOM = 2.5;
+const MIN_ZOOM = 0.001; // Virtually infinite zoom out
+const MAX_ZOOM = 100.0; // Virtually infinite zoom in
 
 function setZoom(newZoom, centerPoint = null) {
   const wrap = document.getElementById('canvas-wrap');
