@@ -46,6 +46,54 @@
     </div>
   </div>
 
+  <!-- ====== TEAM SELECTOR WELCOME SCREEN ====== -->
+  <div id="team-selector-overlay" style="display:none;">
+    <div id="team-selector-card">
+      <div id="team-selector-header">
+        <div id="team-selector-logo">🌿</div>
+        <h1 id="team-selector-title">Welcome Back</h1>
+        <p id="team-selector-subtitle">Select a team to view their org chart</p>
+      </div>
+      <div id="team-selector-grid">
+        <button class="team-btn team-btn-all" onclick="selectTeam('ALL')" id="team-btn-ALL">
+          <span class="team-btn-icon">🏢</span>
+          <span class="team-btn-label">All Teams</span>
+          <span class="team-btn-sub">Full Org Chart</span>
+        </button>
+        <button class="team-btn" onclick="selectTeam('MAMATHA')" id="team-btn-MAMATHA">
+          <span class="team-btn-icon">👤</span>
+          <span class="team-btn-label">Mamatha</span>
+          <span class="team-btn-sub">Team A</span>
+        </button>
+        <button class="team-btn" onclick="selectTeam('LIKHITH')" id="team-btn-LIKHITH">
+          <span class="team-btn-icon">👤</span>
+          <span class="team-btn-label">Likhith</span>
+          <span class="team-btn-sub">Team B</span>
+        </button>
+        <button class="team-btn" onclick="selectTeam('NARENDRA')" id="team-btn-NARENDRA">
+          <span class="team-btn-icon">👤</span>
+          <span class="team-btn-label">Narendra</span>
+          <span class="team-btn-sub">Sub-Team</span>
+        </button>
+        <button class="team-btn" onclick="selectTeam('SUDHIR')" id="team-btn-SUDHIR">
+          <span class="team-btn-icon">👤</span>
+          <span class="team-btn-label">Sudhir</span>
+          <span class="team-btn-sub">Sub-Team</span>
+        </button>
+        <button class="team-btn" onclick="selectTeam('BHARATH')" id="team-btn-BHARATH">
+          <span class="team-btn-icon">👤</span>
+          <span class="team-btn-label">Bharath</span>
+          <span class="team-btn-sub">Sub-Team</span>
+        </button>
+        <button class="team-btn" onclick="selectTeam('CHANDRAHAS')" id="team-btn-CHANDRAHAS">
+          <span class="team-btn-icon">👤</span>
+          <span class="team-btn-label">Chandrahas</span>
+          <span class="team-btn-sub">Sub-Team</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- Single Unified 3-Line Hamburger Menu Button (Top-Left) -->
   <button id="btn-hamburger-menu" class="btn-hamburger-toggle" onclick="toggleUnifiedMenu()" title="Main Menu & Tools">☰</button>
 

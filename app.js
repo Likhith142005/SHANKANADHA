@@ -53,18 +53,74 @@ let isFirstLoad = true;
 // ====== SUBTREE ISOLATED FOCUS STATE ======
 let focusedRootId = null;   // null = full org chart; string nodeId = focused sub-tree
 let focusedRootName = null; // Persists focus across Supabase reloads (search by name)
+let focus3LevelHistory = []; // Stack to track history for 3-Level Dynamic Focus mode
 
-// Resolve focusedRootId from name — called at top of renderAll so stale IDs auto-heal
-function resolveFocusedRootId() {
-  if (!focusedRootName) return;
-  const target = Object.values(nodes).find(
-    n => n.data && n.data.name && n.data.name.trim().toUpperCase() === focusedRootName.toUpperCase()
-  );
-  if (target) {
-    focusedRootId = target.id;
+function goBack3LevelFocus() {
+  if (sizingMode !== 'focus_3_level') return;
+
+  let prev = null;
+  if (focus3LevelHistory.length > 0) {
+    prev = focus3LevelHistory.pop();
   } else {
-    focusedRootId = null;
-    focusedRootName = null;
+    // If history is empty, try navigating to the parent of current mother node
+    const curEffectiveRoot = (focusedRootId && nodes[focusedRootId]) ? focusedRootId : rootId;
+    const curN = nodes[curEffectiveRoot];
+    if (curN && curN.parent && nodes[curN.parent]) {
+      const p = nodes[curN.parent];
+      prev = {
+        id: p.id,
+        name: (p.data && p.data.name) ? p.data.name.trim().toUpperCase() : null
+      };
+    }
+  }
+
+  if (prev && prev.id && nodes[prev.id]) {
+    focusedRootId = prev.id;
+    focusedRootName = prev.name || ((nodes[prev.id].data && nodes[prev.id].data.name) ? nodes[prev.id].data.name.trim().toUpperCase() : null);
+
+    const focusPill = document.getElementById('focus-pill-top');
+    const treeName  = document.getElementById('top-focus-tree-name');
+    if (focusPill && treeName) {
+      const curN = nodes[focusedRootId];
+      treeName.textContent = (curN && curN.data && curN.data.name) ? curN.data.name : focusedRootId;
+      focusPill.style.display = 'inline-flex';
+    }
+
+    const prevName = (nodes[focusedRootId]?.data?.name) || focusedRootId;
+    showToast(`⬅️ Back to: ${prevName}`);
+    renderAll();
+    fitToScreen();
+  } else {
+    showToast(`ℹ️ Already at the root node`);
+  }
+}
+
+function resolveFocusedRootId() {
+  // If we have an ID, verify it still exists in the local map
+  if (focusedRootId) {
+    if (nodes[focusedRootId]) {
+      const n = nodes[focusedRootId];
+      focusedRootName = (n.data && n.data.name) ? n.data.name : null;
+    } else {
+      // ID no longer exists in nodes — clear focus
+      focusedRootId = null;
+      focusedRootName = null;
+      localStorage.removeItem('org_chart_focused_root_id');
+    }
+    return;
+  }
+  // Fallback: if no ID but we have a name (old cached data), do one-time name lookup
+  if (focusedRootName) {
+    const target = Object.values(nodes).find(
+      n => n.data && n.data.name && n.data.name.trim().toUpperCase() === focusedRootName.toUpperCase()
+    );
+    if (target) {
+      focusedRootId = target.id;
+      focusedRootName = target.data.name;
+      localStorage.setItem('org_chart_focused_root_id', focusedRootId);
+    } else {
+      focusedRootName = null;
+    }
   }
 }
 
@@ -80,6 +136,7 @@ function toggleHierarchicalSizing(mode) {
     if (mode === 'focus_3_level') {
       focusedRootName = null;
       focusedRootId = null;
+      focus3LevelHistory = [];
       const focusPill = document.getElementById('focus-pill-top');
       if (focusPill) focusPill.style.display = 'none';
       try {
@@ -92,6 +149,7 @@ function toggleHierarchicalSizing(mode) {
     sizingMode = mode;
     // When turning ON 3-level focus, auto-set YAMUNA as the initial focused root
     if (mode === 'focus_3_level') {
+      focus3LevelHistory = [];
       const yamunaNode = Object.values(nodes).find(
         n => n.data && n.data.name && n.data.name.trim().toUpperCase() === 'YAMUNA'
       );
@@ -407,7 +465,8 @@ function setSubtreeFocus(nodeId) {
 
   focusedRootId = nodeId;
   const focusName = (n.data && n.data.name) ? n.data.name : n.id;
-  focusedRootName = focusName.trim().toUpperCase(); // Persist by name
+  focusedRootName = focusName.trim().toUpperCase(); 
+  localStorage.setItem('org_chart_focused_root_id', focusedRootId);
 
   const focusPill = document.getElementById('focus-pill-top');
   const treeName = document.getElementById('top-focus-tree-name');
@@ -429,7 +488,8 @@ function setSubtreeFocus(nodeId) {
 
 function clearSubtreeFocus() {
   focusedRootId = null;
-  focusedRootName = null; // Clear name persistence
+  focusedRootName = null;
+  localStorage.removeItem('org_chart_focused_root_id');
 
   const focusPill = document.getElementById('focus-pill-top');
   if (focusPill) {
@@ -456,6 +516,7 @@ function focusYamunaOnInit() {
   );
   if (yamunaNode && yamunaNode.id !== rootId) {
     focusedRootId = yamunaNode.id;
+    localStorage.setItem('org_chart_focused_root_id', focusedRootId);
     const focusPill = document.getElementById('focus-pill-top');
     const treeName = document.getElementById('top-focus-tree-name');
     if (focusPill && treeName) {
@@ -944,6 +1005,8 @@ function saveLocalCache() {
     if (rootId) localStorage.setItem('org_chart_root_id', rootId);
     localStorage.setItem('org_chart_id_counter', idCounter.toString());
     localStorage.setItem('org_chart_sizing_mode', sizingMode);
+    if (focusedRootId) localStorage.setItem('org_chart_focused_root_id', focusedRootId);
+    else localStorage.removeItem('org_chart_focused_root_id');
   } catch (e) {
     console.error('Local cache save error:', e);
   }
@@ -960,6 +1023,9 @@ function loadLocalCache() {
       sizingMode = cachedSizingMode;
       updateSizingUI();
     }
+
+    const savedFocusedId = localStorage.getItem('org_chart_focused_root_id');
+    if (savedFocusedId) focusedRootId = savedFocusedId;
 
     if (cachedNodes && cachedRoot) {
       nodes = JSON.parse(cachedNodes);
@@ -1652,6 +1718,57 @@ function renderNode(n) {
     el.appendChild(plus);
   }
 
+  // ✅ GREEN Back button BELOW the Mother Node — ONLY in 3-Level Dynamic Focus Mode
+  const effectiveRoot = (focusedRootId && nodes[focusedRootId]) ? focusedRootId : rootId;
+  if (sizingMode === 'focus_3_level' && n.id === effectiveRoot && !n.isFake) {
+    const canGoBack = (focus3LevelHistory.length > 0) || (n.parent && nodes[n.parent]);
+    if (canGoBack) {
+      const backBtn = document.createElement('div');
+      backBtn.className = 'box-back-btn';
+      backBtn.innerHTML = '&#9664; Back';
+      backBtn.title = 'Go back to previous node';
+      // Inline green styles as guaranteed fallback
+      backBtn.style.cssText = [
+        'position:absolute',
+        'left:50%',
+        'bottom:-52px',
+        'transform:translateX(-50%)',
+        'background:linear-gradient(135deg,#16A34A,#22C55E)',
+        'color:#ffffff',
+        'padding:9px 20px',
+        'border-radius:24px',
+        'font-size:14px',
+        'font-weight:900',
+        'border:2.5px solid #ffffff',
+        'box-shadow:0 4px 16px rgba(22,163,74,0.50)',
+        'cursor:pointer',
+        'display:flex',
+        'align-items:center',
+        'gap:7px',
+        'white-space:nowrap',
+        'z-index:20',
+        'transition:all 0.2s ease',
+        'user-select:none',
+        'letter-spacing:0.3px'
+      ].join(';');
+      backBtn.addEventListener('mouseover', () => {
+        backBtn.style.background = 'linear-gradient(135deg,#15803D,#16A34A)';
+        backBtn.style.transform = 'translateX(-50%) scale(1.1)';
+        backBtn.style.boxShadow = '0 8px 22px rgba(22,163,74,0.65)';
+      });
+      backBtn.addEventListener('mouseout', () => {
+        backBtn.style.background = 'linear-gradient(135deg,#16A34A,#22C55E)';
+        backBtn.style.transform = 'translateX(-50%)';
+        backBtn.style.boxShadow = '0 4px 16px rgba(22,163,74,0.50)';
+      });
+      backBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        goBack3LevelFocus();
+      });
+      el.appendChild(backBtn);
+    }
+  }
+
   el.addEventListener('click', (e) => {
     e.stopPropagation();
 
@@ -1661,6 +1778,15 @@ function renderNode(n) {
         if (n.parent && nodes[n.parent]) openPanel(n.parent);
         return;
       }
+
+      // Record current mother node into history stack before drilling down
+      if (effectiveRoot && effectiveRoot !== n.id) {
+        focus3LevelHistory.push({
+          id: effectiveRoot,
+          name: (nodes[effectiveRoot]?.data?.name) ? nodes[effectiveRoot].data.name.trim().toUpperCase() : null
+        });
+      }
+
       // Drill-down: promote clicked node to focused root, regenerate 3-level view
       focusedRootId   = n.id;
       focusedRootName = (n.data && n.data.name) ? n.data.name.trim().toUpperCase() : null;
@@ -2094,6 +2220,94 @@ function checkLoginSession() {
   }
 }
 
+// ====== TEAM SELECTOR WELCOME SCREEN ======
+function showTeamSelector() {
+  const overlay = document.getElementById('team-selector-overlay');
+  if (overlay) {
+    overlay.style.display = 'flex';
+    // Re-trigger card animation
+    const card = document.getElementById('team-selector-card');
+    if (card) {
+      card.style.animation = 'none';
+      card.offsetHeight; // force reflow
+      card.style.animation = '';
+    }
+  }
+}
+
+function selectTeam(teamName) {
+  const overlay = document.getElementById('team-selector-overlay');
+  if (overlay) {
+    overlay.style.opacity = '0';
+    overlay.style.transition = 'opacity 0.3s ease';
+    setTimeout(() => {
+      overlay.style.display = 'none';
+      overlay.style.opacity = '';
+      overlay.style.transition = '';
+    }, 300);
+  }
+
+  if (teamName === 'ALL') {
+    // Show full org chart — clear any subtree focus
+    focusedRootId = null;
+    focusedRootName = null;
+    const focusPill = document.getElementById('focus-pill-top');
+    if (focusPill) focusPill.style.display = 'none';
+    renderAll();
+    fitToScreen();
+    showToast('🏢 Showing Full Org Chart');
+    return;
+  }
+
+  // Expected parents for each team lead (for disambiguation if duplicates exist)
+  const TEAM_PARENT_MAP = {
+    'MAMATHA': 'YAMUNA',
+    'LIKHITH': 'YAMUNA',
+    'NARENDRA': 'MAMATHA',
+    'SUDHIR': 'MAMATHA',
+    'BHARATH': 'LIKHITH',
+    'CHANDRAHAS': 'LIKHITH'
+  };
+
+  const matches = Object.values(nodes).filter(
+    n => n.data && n.data.name && n.data.name.trim().toUpperCase() === teamName.toUpperCase()
+  );
+
+  let targetNode = matches[0];
+
+  // If there are duplicates, pick the one under the expected parent
+  if (matches.length > 1 && TEAM_PARENT_MAP[teamName.toUpperCase()]) {
+    const expectedParent = TEAM_PARENT_MAP[teamName.toUpperCase()];
+    const better = matches.find(n => {
+      const p = n.parent && nodes[n.parent];
+      return p && p.data && p.data.name && p.data.name.trim().toUpperCase() === expectedParent;
+    });
+    if (better) targetNode = better;
+  }
+
+  if (targetNode) {
+    focusedRootId = targetNode.id;
+    focusedRootName = teamName.toUpperCase();
+
+    const focusPill = document.getElementById('focus-pill-top');
+    const treeName = document.getElementById('top-focus-tree-name');
+    if (focusPill && treeName) {
+      treeName.textContent = targetNode.data.name;
+      focusPill.style.display = 'inline-flex';
+    }
+
+    renderAll();
+    fitToScreen();
+    showToast(`🌿 Viewing ${targetNode.data.name}'s Team`);
+  } else {
+    // Node not loaded yet — store name and it will resolve when data loads
+    focusedRootName = teamName.toUpperCase();
+    renderAll();
+    fitToScreen();
+    showToast(`🌿 Focusing on ${teamName}'s Team`);
+  }
+}
+
 async function submitLogin(e) {
   if (e && e.preventDefault) e.preventDefault();
 
@@ -2125,6 +2339,8 @@ async function submitLogin(e) {
     if (errorMsg) errorMsg.style.display = 'none';
     if (overlay) overlay.style.display = 'none';
     showToast(`🔓 Welcome, ${enteredUser}!`);
+    // Show team selector after a brief delay so toast is visible
+    setTimeout(showTeamSelector, 400);
   } else {
     if (errorMsg) {
       errorMsg.textContent = '❌ Invalid Email or Password';
@@ -2172,6 +2388,14 @@ function initSecurityProtections() {
 function initApp() {
   initSecurityProtections();
   checkLoginSession();
+
+  // If already authenticated on page refresh → show team selector greeting
+  const isAlreadyAuth = localStorage.getItem('org_chart_auth') === 'true' || sessionStorage.getItem('org_chart_auth') === 'true';
+  if (isAlreadyAuth) {
+    // Show selector after data is ready (small timeout to let renderAll run first)
+    setTimeout(showTeamSelector, 800);
+  }
+
   const userInput = document.getElementById('login-username-input');
   const passInput = document.getElementById('login-password-input');
 
@@ -2338,6 +2562,7 @@ function initApp() {
     );
     if (yamunaNode && yamunaNode.id !== rootId) {
       focusedRootId = yamunaNode.id;
+      localStorage.setItem('org_chart_focused_root_id', focusedRootId);
       const focusPill = document.getElementById('focus-pill-top');
       const treeName = document.getElementById('top-focus-tree-name');
       if (focusPill && treeName) {

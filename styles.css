@@ -8,6 +8,175 @@
   --box-border: #3B2A66;
 }
 
+/* ====== TEAM SELECTOR WELCOME OVERLAY ====== */
+#team-selector-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 99998;
+  background: linear-gradient(145deg, #1A0F35 0%, #2B1E4A 40%, #3B2A66 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: tsOverlayIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes tsOverlayIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+#team-selector-card {
+  width: 100%;
+  max-width: 640px;
+  padding: 40px 32px 44px;
+  animation: tsCardIn 0.55s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes tsCardIn {
+  from { opacity: 0; transform: translateY(32px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+#team-selector-header {
+  text-align: center;
+  margin-bottom: 36px;
+}
+
+#team-selector-logo {
+  font-size: 52px;
+  margin-bottom: 12px;
+  filter: drop-shadow(0 4px 12px rgba(124, 92, 191, 0.6));
+}
+
+#team-selector-title {
+  margin: 0 0 8px 0;
+  font-size: 32px;
+  font-weight: 900;
+  color: #ffffff;
+  letter-spacing: -0.5px;
+  text-shadow: 0 2px 12px rgba(0,0,0,0.3);
+}
+
+#team-selector-subtitle {
+  margin: 0;
+  font-size: 15px;
+  color: rgba(255,255,255,0.65);
+  font-weight: 600;
+}
+
+#team-selector-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+}
+
+/* "All Teams" button spans full width on first row */
+#team-selector-grid .team-btn-all {
+  grid-column: 1 / -1;
+  background: linear-gradient(135deg, #7C5CBF, #5C3FA0) !important;
+  border-color: rgba(255,255,255,0.25) !important;
+  flex-direction: row !important;
+  gap: 12px !important;
+  padding: 18px 28px !important;
+}
+
+#team-selector-grid .team-btn-all .team-btn-icon {
+  font-size: 28px !important;
+}
+
+#team-selector-grid .team-btn-all .team-btn-label {
+  font-size: 19px !important;
+}
+
+.team-btn {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1.5px solid rgba(255, 255, 255, 0.14);
+  border-radius: 20px;
+  color: #ffffff;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 22px 10px;
+  transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  position: relative;
+  overflow: hidden;
+}
+
+.team-btn::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(255,255,255,0.12), rgba(255,255,255,0));
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  border-radius: inherit;
+}
+
+.team-btn:hover {
+  background: rgba(124, 92, 191, 0.45);
+  border-color: rgba(124, 92, 191, 0.7);
+  transform: translateY(-4px) scale(1.03);
+  box-shadow: 0 12px 32px rgba(124, 92, 191, 0.4);
+}
+
+.team-btn:hover::before {
+  opacity: 1;
+}
+
+.team-btn:active {
+  transform: translateY(-1px) scale(1.0);
+  transition: all 0.08s ease;
+}
+
+.team-btn-icon {
+  font-size: 26px;
+  display: block;
+  line-height: 1;
+}
+
+.team-btn-label {
+  font-size: 15px;
+  font-weight: 900;
+  display: block;
+  letter-spacing: 0.2px;
+}
+
+.team-btn-sub {
+  font-size: 10px;
+  font-weight: 600;
+  color: rgba(255,255,255,0.55);
+  display: block;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+}
+
+@media (max-width: 600px) {
+  #team-selector-card {
+    padding: 28px 16px 32px;
+  }
+  #team-selector-grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+  }
+  #team-selector-grid .team-btn-all {
+    grid-column: 1 / -1;
+  }
+  #team-selector-title {
+    font-size: 24px;
+  }
+  .team-btn {
+    padding: 16px 8px;
+  }
+  .team-btn-label {
+    font-size: 12px;
+  }
+}
+
 * {
   box-sizing: border-box;
 }
@@ -247,6 +416,7 @@ svg#lines {
   padding: 14px 18px;
   box-shadow: 0 6px 22px rgba(90, 60, 150, 0.32);
   position: absolute;
+  overflow: visible;
 }
 
 /* Subtle Light Red Tint for Inactive Status Nodes */
@@ -759,6 +929,49 @@ svg#lines {
 
 .node.box .box-status-dot:hover {
   transform: scale(1.2);
+}
+
+/* Back button below mother node in 3-Level Dynamic Focus mode */
+.node.box .box-back-btn {
+  position: absolute;
+  left: 50%;
+  bottom: -52px;
+  transform: translateX(-50%);
+  background: linear-gradient(135deg, #16A34A, #22C55E);
+  color: #ffffff;
+  padding: 9px 20px;
+  border-radius: 24px;
+  font-size: 14px;
+  font-weight: 900;
+  border: 2.5px solid #ffffff;
+  box-shadow: 0 4px 16px rgba(22, 163, 74, 0.50);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  white-space: nowrap;
+  z-index: 20;
+  transition: all 0.2s ease;
+  user-select: none;
+  letter-spacing: 0.3px;
+}
+
+.node.box .box-back-btn:hover {
+  background: linear-gradient(135deg, #15803D, #16A34A);
+  transform: translateX(-50%) scale(1.1);
+  box-shadow: 0 8px 22px rgba(22, 163, 74, 0.65);
+}
+
+.node.box .box-back-btn:active {
+  transform: translateX(-50%) scale(0.97);
+}
+
+@media (max-width: 600px) {
+  .node.box .box-back-btn {
+    bottom: -44px;
+    font-size: 11px;
+    padding: 6px 12px;
+  }
 }
 
 /* Single Unified 3-Line Hamburger Menu Button (Top-Left) */
