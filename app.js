@@ -163,39 +163,31 @@ let sizingMode = 'off';
 
 function toggleHierarchicalSizing(mode) {
   if (sizingMode === mode) {
-    // Toggle OFF
+    // Toggle OFF -> Return to Master Org Chart starting from HK root
     sizingMode = 'off';
-    // When turning off 3-level focus, clear the sub-tree focus only if it was set by this mode
-    if (mode === 'focus_3_level') {
-      focusedRootName = null;
-      focusedRootId = null;
-      focus3LevelHistory = [];
-      const focusPill = document.getElementById('focus-pill-top');
-      if (focusPill) focusPill.style.display = 'none';
-      try {
-        const url = new URL(window.location);
-        url.searchParams.delete('focus');
-        window.history.replaceState({}, '', url.pathname);
-      } catch(e) {}
-    }
+    focusedRootName = null;
+    focusedRootId = null;
+    focus3LevelHistory = [];
+    localStorage.removeItem('org_chart_focused_root_id');
+    try {
+      const url = new URL(window.location);
+      url.searchParams.delete('focus');
+      url.searchParams.delete('focusId');
+      window.history.replaceState({}, '', url.pathname);
+    } catch(e) {}
   } else {
     sizingMode = mode;
-    // When turning ON 3-level focus, auto-set YAMUNA as the initial focused root
+    // When turning ON 3-level focus, start from master HK root node with all nodes under it
     if (mode === 'focus_3_level') {
       focus3LevelHistory = [];
-      const yamunaNode = Object.values(nodes).find(
-        n => n.data && n.data.name && n.data.name.trim().toUpperCase() === 'YAMUNA'
-      );
-      const targetNode = yamunaNode || (rootId && nodes[rootId]);
-      if (targetNode) {
-        focusedRootId = targetNode.id;
-        focusedRootName = (targetNode.data && targetNode.data.name) ? targetNode.data.name.trim().toUpperCase() : null;
-        const focusPill = document.getElementById('focus-pill-top');
-        const treeName  = document.getElementById('top-focus-tree-name');
-        if (focusPill && treeName) {
-          treeName.textContent = targetNode.data.name;
-          focusPill.style.display = 'inline-flex';
-        }
+      const hkNode = Object.values(nodes).find(
+        n => n.data && n.data.name && n.data.name.trim().toUpperCase() === 'HK'
+      ) || (rootId && nodes[rootId]);
+      
+      if (hkNode) {
+        focusedRootId = hkNode.id;
+        focusedRootName = (hkNode.data && hkNode.data.name) ? hkNode.data.name.trim().toUpperCase() : 'HK';
+        localStorage.setItem('org_chart_focused_root_id', focusedRootId);
       }
     }
   }
@@ -1810,8 +1802,22 @@ function renderNode(n) {
 
     if (sizingMode === 'focus_3_level') {
       if (n.isFake) {
-        // Clicking an empty slot → open the panel on its parent to add a real member
-        if (n.parent && nodes[n.parent]) openPanel(n.parent);
+        // Clicking an empty placeholder node → create real node branch under parent & open edit modal immediately
+        if (n.parent && nodes[n.parent]) {
+          const parentId = n.parent;
+          const branchTypeToAdd = n.branchType || 'A';
+          const p = nodes[parentId];
+          const hasBranch = p && p.children.some(cid => nodes[cid] && nodes[cid].branchType === branchTypeToAdd);
+          if (!hasBranch) {
+            pushHistoryState(`Adding Branch ${branchTypeToAdd} under "${(p.data && p.data.name) ? p.data.name : parentId}"`);
+            const newId = makeId();
+            createNodeInDb(newId, parentId, branchTypeToAdd).then(() => {
+              renderAll();
+              openPanel(newId);
+              showToast(`➕ Added Branch ${branchTypeToAdd}! Fill details.`);
+            });
+          }
+        }
         return;
       }
 
@@ -1826,15 +1832,9 @@ function renderNode(n) {
       // Drill-down: promote clicked node to focused root, regenerate 3-level view
       focusedRootId   = n.id;
       focusedRootName = (n.data && n.data.name) ? n.data.name.trim().toUpperCase() : null;
-      const focusPill = document.getElementById('focus-pill-top');
-      const treeName  = document.getElementById('top-focus-tree-name');
-      if (focusPill && treeName) {
-        treeName.textContent = (n.data && n.data.name) ? n.data.name : n.id;
-        focusPill.style.display = 'inline-flex';
-      }
-      showToast(`🔍 Focused on: ${(n.data && n.data.name) ? n.data.name : n.id}`);
       renderAll();
       fitToScreen();
+      showToast(`🔍 Focused on: ${(n.data && n.data.name) ? n.data.name : n.id}`);
       return;
     }
 
@@ -1945,6 +1945,82 @@ async function deleteNodeCascade(nodeId) {
     } catch (e) {
       console.error('Delete exception:', e);
     }
+  }
+}
+
+async function deleteEmptyUnusedNodes() {
+  // Identify all nodes that do NOT contain any client detail (name is empty or whitespace)
+  const emptyNodeIds = Object.keys(nodes).filter(id => {
+    if (id === rootId) return false; // Never delete root
+    const n = nodes[id];
+    if (!n || n.isFake) return false;
+    const name = (n.data && n.data.name) ? n.data.name.trim() : '';
+    return name === '';
+  });
+
+  if (emptyNodeIds.length === 0) {
+    showToast('✨ No empty nodes found! All nodes contain client details.');
+    return;
+  }
+
+  const confirmMsg = `Are you sure you want to delete ${emptyNodeIds.length} empty node(s) without client details?`;
+  if (!confirm(confirmMsg)) return;
+
+  pushHistoryState(`Batch delete of ${emptyNodeIds.length} empty node(s)`);
+
+  // We perform bottom-up deletion so child references clean up properly
+  // Sort node IDs by depth descending
+  const sortedEmptyIds = [...emptyNodeIds].sort((a, b) => {
+    const depthA = nodes[a]?.depth || 0;
+    const depthB = nodes[b]?.depth || 0;
+    return depthB - depthA;
+  });
+
+  const deletedIds = [];
+
+  sortedEmptyIds.forEach(id => {
+    const n = nodes[id];
+    if (!n) return;
+    
+    // Unlink from parent
+    if (n.parent && nodes[n.parent]) {
+      nodes[n.parent].children = nodes[n.parent].children.filter(cid => cid !== id);
+    }
+    
+    // Re-assign or orphan any children if they exist, to prevent breaking tree
+    if (n.children && n.children.length > 0) {
+      n.children.forEach(cid => {
+        if (nodes[cid]) {
+          nodes[cid].parent = n.parent;
+          if (n.parent && nodes[n.parent] && !nodes[n.parent].children.includes(cid)) {
+            nodes[n.parent].children.push(cid);
+          }
+        }
+      });
+    }
+
+    delete nodes[id];
+    deletedIds.push(id);
+  });
+
+  saveLocalCache();
+  closePanel();
+  renderAll();
+
+  if (typeof supabaseClient !== 'undefined' && supabaseClient) {
+    try {
+      const { error } = await supabaseClient.from('org_nodes').delete().in('id', deletedIds);
+      if (error) {
+        console.error('Supabase Empty Nodes Delete Error:', error);
+        showToast('Delete Error: ' + error.message);
+      } else {
+        showToast(`🧹 Cleaned up ${deletedIds.length} empty node(s)!`);
+      }
+    } catch (e) {
+      console.error('Delete empty nodes exception:', e);
+    }
+  } else {
+    showToast(`🧹 Cleaned up ${deletedIds.length} empty node(s)!`);
   }
 }
 
@@ -2592,27 +2668,20 @@ function initApp() {
   }
   loadUndoRedoHistory();
 
-  // Always persist YAMUNA as the intended focus target by name
-  // resolveFocusedRootId() inside renderAll will translate name → ID each time
+  // Always default to HK master root node on launch unless explicit URL focus parameter exists
   const urlParams = new URLSearchParams(window.location.search);
   const hasFocusParam = urlParams.get('focus') || urlParams.get('focusId');
   if (hasFocusParam) {
     checkUrlFocusParam();
   } else {
-    // Set name-based focus to YAMUNA so it survives Supabase ID changes
-    focusedRootName = 'YAMUNA';
-    const yamunaNode = Object.values(nodes).find(
-      n => n.data && n.data.name && n.data.name.trim().toUpperCase() === 'YAMUNA'
-    );
-    if (yamunaNode && yamunaNode.id !== rootId) {
-      focusedRootId = yamunaNode.id;
+    // Set default focus to HK root node
+    const hkNode = Object.values(nodes).find(
+      n => n.data && n.data.name && n.data.name.trim().toUpperCase() === 'HK'
+    ) || (rootId && nodes[rootId]);
+    if (hkNode) {
+      focusedRootId = hkNode.id;
+      focusedRootName = 'HK';
       localStorage.setItem('org_chart_focused_root_id', focusedRootId);
-      const focusPill = document.getElementById('focus-pill-top');
-      const treeName = document.getElementById('top-focus-tree-name');
-      if (focusPill && treeName) {
-        treeName.textContent = 'YAMUNA';
-        focusPill.style.display = 'inline-flex';
-      }
     }
     renderAll();
   }

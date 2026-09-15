@@ -111,12 +111,8 @@
       </div>
     </div>
 
-    <!-- Right Section: Tools (Subtree Focus Pill, Undo, Redo, Mobile/Desktop Switch, 3-Level Dynamic Toggle Icon) -->
+    <!-- Right Section: Tools (Undo, Redo, Mobile/Desktop Switch, 3-Level Dynamic Toggle Icon) -->
     <div class="taskbar-right">
-      <div id="focus-pill-top" class="top-focus-pill" style="display: none;" onclick="clearSubtreeFocus()" title="Click to Exit Isolated View">
-        <span>🌿 <b id="top-focus-tree-name">YAMUNA</b></span>
-        <span class="btn-clear-focus">✕</span>
-      </div>
       <button class="taskbar-btn" id="btn-top-undo" title="Undo (Ctrl+Z)">↩️</button>
       <button class="taskbar-btn" id="btn-top-redo" title="Redo (Ctrl+Y)">↪️</button>
       <button class="taskbar-btn" id="btn-device-toggle" onclick="toggleMobileView()" title="Toggle Mobile/Desktop View">📱</button>
@@ -170,6 +166,10 @@
         <button class="btn-drawer-action purple" id="btn-drawer-multiselect" onclick="toggleMultiSelectMode()" style="margin-top: 8px;">
           <span>☑️ Multi-Select & Delete</span>
           <span id="badge-multiselect-mode" style="font-size:11px; opacity:0.8;">OFF</span>
+        </button>
+        <button class="btn-drawer-action red" id="btn-delete-empty-nodes" onclick="deleteEmptyUnusedNodes()" style="margin-top: 8px; background: linear-gradient(135deg, #DC2626, #EF4444);">
+          <span>🧹 Delete All Empty Nodes</span>
+          <span style="font-size:11px; opacity:0.9;">AUTO</span>
         </button>
       </div>
     </div>
