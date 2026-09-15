@@ -2,10 +2,34 @@
 // ORG CHART CORE APPLICATION LOGIC & SUPABASE DUAL-PERSISTENCE
 // ================================================================
 
-const BOX_W = 320;
-const BOX_H = 150;
-const LEVEL_GAP = 160;
-const LEAF_GAP = 60;
+let BOX_W = 320;
+let BOX_H = 150;
+let LEVEL_GAP = 160;
+let LEAF_GAP = 60;
+let isMobileView = false;
+
+function toggleMobileView() {
+  isMobileView = !isMobileView;
+  if (isMobileView) {
+    BOX_W = 160;
+    BOX_H = 80;
+    LEVEL_GAP = 80;
+    LEAF_GAP = 30;
+    document.body.classList.add('mobile-view');
+    showToast('📱 Switched to Mobile Layout');
+  } else {
+    BOX_W = 320;
+    BOX_H = 150;
+    LEVEL_GAP = 160;
+    LEAF_GAP = 60;
+    document.body.classList.remove('mobile-view');
+    showToast('💻 Switched to Desktop Layout');
+  }
+  
+  // Re-layout and scale appropriately
+  renderAll();
+  setTimeout(fitToScreen, 50);
+}
 
 // ====== DEFAULT INITIAL STATIC DATA ======
 const STATIC_DATA = {
@@ -1769,6 +1793,19 @@ function renderNode(n) {
     }
   }
 
+  // ✅ EDIT Button — Accessible in 3-Level Dynamic Focus mode to allow opening edit panel
+  if (sizingMode === 'focus_3_level' && !n.isFake) {
+    const editBtn = document.createElement('div');
+    editBtn.className = 'box-edit-btn';
+    editBtn.innerHTML = '✏️';
+    editBtn.title = 'Edit Details';
+    editBtn.addEventListener('click', (e) => {
+      e.stopPropagation(); // Prevents subtree navigation
+      openPanel(n.id);
+    });
+    el.appendChild(editBtn);
+  }
+
   el.addEventListener('click', (e) => {
     e.stopPropagation();
 
@@ -2388,6 +2425,11 @@ function initSecurityProtections() {
 function initApp() {
   initSecurityProtections();
   checkLoginSession();
+
+  // Auto detect mobile device wrapper sizing
+  if (window.innerWidth <= 600) {
+    toggleMobileView(); // Sets to true
+  }
 
   // If already authenticated on page refresh → show team selector greeting
   const isAlreadyAuth = localStorage.getItem('org_chart_auth') === 'true' || sessionStorage.getItem('org_chart_auth') === 'true';
