@@ -1074,46 +1074,47 @@ svg#lines {
   transform: scale(1.2);
 }
 
-/* Back button below mother node in 3-Level Dynamic Focus mode */
+/* Back button on the RIGHT side of mother node in 3-Level Dynamic Focus mode */
 .node.box .box-back-btn {
   position: absolute;
-  left: 50%;
-  bottom: -52px;
-  transform: translateX(-50%);
+  right: -140px;
+  top: 50%;
+  transform: translateY(-50%);
   background: linear-gradient(135deg, #16A34A, #22C55E);
   color: #ffffff;
-  padding: 9px 20px;
-  border-radius: 24px;
-  font-size: 14px;
+  padding: 12px 24px;
+  border-radius: 30px;
+  font-size: 16px;
   font-weight: 900;
-  border: 2.5px solid #ffffff;
-  box-shadow: 0 4px 16px rgba(22, 163, 74, 0.50);
+  border: 3px solid #ffffff;
+  box-shadow: 0 6px 20px rgba(22, 163, 74, 0.60);
   cursor: pointer;
   display: flex;
   align-items: center;
-  gap: 7px;
+  gap: 8px;
   white-space: nowrap;
-  z-index: 20;
-  transition: all 0.2s ease;
+  z-index: 30;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
   user-select: none;
-  letter-spacing: 0.3px;
+  letter-spacing: 0.4px;
 }
 
 .node.box .box-back-btn:hover {
   background: linear-gradient(135deg, #15803D, #16A34A);
-  transform: translateX(-50%) scale(1.1);
-  box-shadow: 0 8px 22px rgba(22, 163, 74, 0.65);
+  transform: translateY(-50%) scale(1.12);
+  box-shadow: 0 10px 28px rgba(22, 163, 74, 0.75);
 }
 
 .node.box .box-back-btn:active {
-  transform: translateX(-50%) scale(0.97);
+  transform: translateY(-50%) scale(0.97);
 }
 
 @media (max-width: 600px) {
   .node.box .box-back-btn {
-    bottom: -44px;
-    font-size: 11px;
-    padding: 6px 12px;
+    right: -100px;
+    font-size: 12px;
+    padding: 8px 14px;
+    border-radius: 20px;
   }
 }
 
@@ -2006,9 +2007,11 @@ body.mobile-view .node.box .box-plus {
 }
 
 body.mobile-view .node.box .box-back-btn {
-  transform: translateX(-50%) scale(0.65) !important;
-  bottom: -32px !important;
-  padding: 5px 12px !important;
-  font-size: 12px !important;
-  border-width: 1.5px !important;
+  transform: translateY(-50%) scale(0.85) !important;
+  right: -95px !important;
+  top: 50% !important;
+  bottom: auto !important;
+  padding: 6px 14px !important;
+  font-size: 13px !important;
+  border-width: 2px !important;
 }

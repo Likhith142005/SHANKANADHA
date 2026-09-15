@@ -1741,7 +1741,7 @@ function renderNode(n) {
     el.appendChild(plus);
   }
 
-  // ✅ GREEN Back button BELOW the Mother Node — ONLY in 3-Level Dynamic Focus Mode
+  // ✅ GREEN Back button ON THE RIGHT SIDE of the Mother Node — ONLY in 3-Level Dynamic Focus Mode
   const effectiveRoot = (focusedRootId && nodes[focusedRootId]) ? focusedRootId : rootId;
   if (sizingMode === 'focus_3_level' && n.id === effectiveRoot && !n.isFake) {
     const canGoBack = (focus3LevelHistory.length > 0) || (n.parent && nodes[n.parent]);
@@ -1750,39 +1750,39 @@ function renderNode(n) {
       backBtn.className = 'box-back-btn';
       backBtn.innerHTML = '&#9664; Back';
       backBtn.title = 'Go back to previous node';
-      // Inline green styles as guaranteed fallback
+      // Inline green styles positioned on the RIGHT side of mother node
       backBtn.style.cssText = [
         'position:absolute',
-        'left:50%',
-        'bottom:-52px',
-        'transform:translateX(-50%)',
+        'right:-140px',
+        'top:50%',
+        'transform:translateY(-50%)',
         'background:linear-gradient(135deg,#16A34A,#22C55E)',
         'color:#ffffff',
-        'padding:9px 20px',
-        'border-radius:24px',
-        'font-size:14px',
+        'padding:12px 24px',
+        'border-radius:30px',
+        'font-size:16px',
         'font-weight:900',
-        'border:2.5px solid #ffffff',
-        'box-shadow:0 4px 16px rgba(22,163,74,0.50)',
+        'border:3px solid #ffffff',
+        'box-shadow:0 6px 20px rgba(22,163,74,0.60)',
         'cursor:pointer',
         'display:flex',
         'align-items:center',
-        'gap:7px',
+        'gap:8px',
         'white-space:nowrap',
-        'z-index:20',
-        'transition:all 0.2s ease',
+        'z-index:30',
+        'transition:all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
         'user-select:none',
-        'letter-spacing:0.3px'
+        'letter-spacing:0.4px'
       ].join(';');
       backBtn.addEventListener('mouseover', () => {
         backBtn.style.background = 'linear-gradient(135deg,#15803D,#16A34A)';
-        backBtn.style.transform = 'translateX(-50%) scale(1.1)';
-        backBtn.style.boxShadow = '0 8px 22px rgba(22,163,74,0.65)';
+        backBtn.style.transform = 'translateY(-50%) scale(1.12)';
+        backBtn.style.boxShadow = '0 10px 28px rgba(22,163,74,0.75)';
       });
       backBtn.addEventListener('mouseout', () => {
         backBtn.style.background = 'linear-gradient(135deg,#16A34A,#22C55E)';
-        backBtn.style.transform = 'translateX(-50%)';
-        backBtn.style.boxShadow = '0 4px 16px rgba(22,163,74,0.50)';
+        backBtn.style.transform = 'translateY(-50%)';
+        backBtn.style.boxShadow = '0 6px 20px rgba(22,163,74,0.60)';
       });
       backBtn.addEventListener('click', (e) => {
         e.stopPropagation();
