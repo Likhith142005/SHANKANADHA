@@ -712,6 +712,7 @@ function loadUndoRedoHistory() {
 function pushHistoryState(actionDescription = 'Chart modification') {
   try {
     const snapshot = JSON.stringify({ nodes, rootId, idCounter });
+    // Avoid duplicate snapshots if no state change occurred
     if (historyStack.length > 0 && historyStack[historyStack.length - 1].state === snapshot) {
       return;
     }
@@ -722,6 +723,7 @@ function pushHistoryState(actionDescription = 'Chart modification') {
     if (historyStack.length > MAX_HISTORY) {
       historyStack.shift();
     }
+    // Clear redo stack on new user action
     redoStack = [];
     saveUndoRedoHistory();
     updateUndoRedoButtonState();
@@ -736,31 +738,37 @@ function undoAction() {
     return;
   }
 
-  const currentSnapshot = JSON.stringify({ nodes, rootId, idCounter });
-  const item = historyStack.pop();
-
-  redoStack.push({
-    state: currentSnapshot,
-    description: item.description
-  });
-  if (redoStack.length > MAX_HISTORY) redoStack.shift();
-
-  saveUndoRedoHistory();
-
   try {
-    const state = JSON.parse(item.state);
-    nodes = state.nodes || {};
-    rootId = state.rootId || null;
-    if (state.idCounter) idCounter = state.idCounter;
+    // Save current state to redo stack before popping previous state
+    const currentSnapshot = JSON.stringify({ nodes, rootId, idCounter });
+    const item = historyStack.pop();
 
+    redoStack.push({
+      state: currentSnapshot,
+      description: item.description
+    });
+    if (redoStack.length > MAX_HISTORY) redoStack.shift();
+
+    const restoredState = JSON.parse(item.state);
+    nodes = restoredState.nodes || {};
+    rootId = restoredState.rootId || null;
+    if (restoredState.idCounter) idCounter = restoredState.idCounter;
+
+    // Save & re-render fully
     saveLocalCache();
     renderAll();
-    syncAllToSupabase();
+    saveUndoRedoHistory();
+    updateUndoRedoButtonState();
+
+    if (typeof syncAllToSupabase === 'function') {
+      syncAllToSupabase();
+    }
+
     showToast(`↩️ Undone: ${item.description}`);
   } catch (e) {
     console.error('Undo restore error:', e);
+    showToast('⚠️ Could not complete undo action');
   }
-  updateUndoRedoButtonState();
 }
 
 function redoAction() {
@@ -769,31 +777,37 @@ function redoAction() {
     return;
   }
 
-  const currentSnapshot = JSON.stringify({ nodes, rootId, idCounter });
-  const item = redoStack.pop();
-
-  historyStack.push({
-    state: currentSnapshot,
-    description: item.description
-  });
-  if (historyStack.length > MAX_HISTORY) historyStack.shift();
-
-  saveUndoRedoHistory();
-
   try {
-    const state = JSON.parse(item.state);
-    nodes = state.nodes || {};
-    rootId = state.rootId || null;
-    if (state.idCounter) idCounter = state.idCounter;
+    // Save current state to undo stack before popping next state
+    const currentSnapshot = JSON.stringify({ nodes, rootId, idCounter });
+    const item = redoStack.pop();
 
+    historyStack.push({
+      state: currentSnapshot,
+      description: item.description
+    });
+    if (historyStack.length > MAX_HISTORY) historyStack.shift();
+
+    const restoredState = JSON.parse(item.state);
+    nodes = restoredState.nodes || {};
+    rootId = restoredState.rootId || null;
+    if (restoredState.idCounter) idCounter = restoredState.idCounter;
+
+    // Save & re-render fully
     saveLocalCache();
     renderAll();
-    syncAllToSupabase();
+    saveUndoRedoHistory();
+    updateUndoRedoButtonState();
+
+    if (typeof syncAllToSupabase === 'function') {
+      syncAllToSupabase();
+    }
+
     showToast(`↪️ Redone: ${item.description}`);
   } catch (e) {
     console.error('Redo restore error:', e);
+    showToast('⚠️ Could not complete redo action');
   }
-  updateUndoRedoButtonState();
 }
 
 function updateUndoRedoButtonState() {

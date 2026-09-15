@@ -113,8 +113,8 @@
 
     <!-- Right Section: Tools (Undo, Redo, Mobile/Desktop Switch, 3-Level Dynamic Toggle Icon) -->
     <div class="taskbar-right">
-      <button class="taskbar-btn" id="btn-top-undo" title="Undo (Ctrl+Z)">↩️</button>
-      <button class="taskbar-btn" id="btn-top-redo" title="Redo (Ctrl+Y)">↪️</button>
+      <button class="taskbar-btn" id="btn-top-undo" onclick="undoAction()" title="Undo (Ctrl+Z)">↩️</button>
+      <button class="taskbar-btn" id="btn-top-redo" onclick="redoAction()" title="Redo (Ctrl+Y)">↪️</button>
       <button class="taskbar-btn" id="btn-device-toggle" onclick="toggleMobileView()" title="Toggle Mobile/Desktop View">📱</button>
       <button class="taskbar-btn" id="btn-3level-toggle" onclick="toggleHierarchicalSizing('focus_3_level')" title="Toggle 3-Level Dynamic Focus">⚡</button>
     </div>
