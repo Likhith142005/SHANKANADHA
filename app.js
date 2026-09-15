@@ -396,6 +396,30 @@ function clearSubtreeFocus() {
   showToast('🏠 Displaying Master Org Chart');
 }
 
+// ====== AUTO-FOCUS YAMUNA ON INITIAL LOAD ======
+function focusYamunaOnInit() {
+  const yamunaNode = Object.values(nodes).find(
+    n => n.data && n.data.name && n.data.name.trim().toUpperCase() === 'YAMUNA'
+  );
+  if (yamunaNode && yamunaNode.id !== rootId) {
+    // Set focusedRootId directly without toast/URL push to keep it silent
+    focusedRootId = yamunaNode.id;
+    const focusPill = document.getElementById('focus-pill-top');
+    const treeName = document.getElementById('top-focus-tree-name');
+    if (focusPill && treeName) {
+      treeName.textContent = 'YAMUNA';
+      focusPill.style.display = 'inline-flex';
+    }
+    try {
+      const url = new URL(window.location);
+      url.searchParams.set('focus', 'YAMUNA');
+      window.history.replaceState({}, '', url);
+    } catch (e) {}
+    renderAll();
+    fitToScreen();
+  }
+}
+
 function checkUrlFocusParam() {
   try {
     const urlParams = new URLSearchParams(window.location.search);
@@ -987,15 +1011,22 @@ async function loadData(isSilent = false) {
 
         if (rootId) {
           saveLocalCache();
-          checkUrlFocusParam();
-          renderAll();
+          const urlParams = new URLSearchParams(window.location.search);
+          const hasFocusParam = urlParams.get('focus') || urlParams.get('focusId');
+          if (hasFocusParam) {
+            checkUrlFocusParam();
+          } else if (isFirstLoad) {
+            focusYamunaOnInit();
+          } else {
+            renderAll();
+          }
           if (!isSilent) showToast('Loaded live data from Supabase!');
           return;
         }
       } else if (!isSilent) {
         showToast('Saving initial Org Chart to Supabase cloud...');
         await seedStaticDataToSupabase();
-        renderAll();
+        focusYamunaOnInit();
         return;
       }
     } catch (e) {
@@ -2148,8 +2179,28 @@ function initApp() {
     loadStaticData();
   }
   loadUndoRedoHistory();
-  checkUrlFocusParam();
-  renderAll();
+
+  // Check if a focus param is in the URL; otherwise auto-focus YAMUNA
+  const urlParams = new URLSearchParams(window.location.search);
+  const hasFocusParam = urlParams.get('focus') || urlParams.get('focusId');
+  if (hasFocusParam) {
+    checkUrlFocusParam();
+  } else {
+    // Focus YAMUNA silently before first render
+    const yamunaNode = Object.values(nodes).find(
+      n => n.data && n.data.name && n.data.name.trim().toUpperCase() === 'YAMUNA'
+    );
+    if (yamunaNode && yamunaNode.id !== rootId) {
+      focusedRootId = yamunaNode.id;
+      const focusPill = document.getElementById('focus-pill-top');
+      const treeName = document.getElementById('top-focus-tree-name');
+      if (focusPill && treeName) {
+        treeName.textContent = 'YAMUNA';
+        focusPill.style.display = 'inline-flex';
+      }
+    }
+    renderAll();
+  }
 
   if(typeof initSupabase === 'function') {
     initSupabase();
