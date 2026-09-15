@@ -2040,6 +2040,9 @@ async function deleteEmptyUnusedNodes() {
 
 // ====== ACTIONS ======
 async function createNodeInDb(id, parentId, branchType = 'A') {
+  const pName = (parentId && nodes[parentId] && nodes[parentId].data && nodes[parentId].data.name) ? nodes[parentId].data.name : 'Parent';
+  pushHistoryState(`Created Branch ${branchType} under "${pName}"`);
+
   nodes[id] = {
     id, x: 0, y: 0,
     parent: parentId,
@@ -2223,7 +2226,8 @@ function saveActiveNode() {
   const formattedEmpId = formatEmpIdForDisplay(rawEmpId);
   const selectPoints = document.getElementById('f-points');
 
-  const oldName = n.data.name || 'Node';
+  const oldName = n.data ? (n.data.name || 'Node') : 'Node';
+  // Push state snapshot BEFORE mutating data
   pushHistoryState(`Editing details of "${newName || oldName}"`);
 
   n.data.name = newName;
@@ -2662,7 +2666,8 @@ function initApp() {
     btnDelete.addEventListener('click', async () => {
       if (!activeNodeId) return;
       const n = nodes[activeNodeId];
-      const nodeName = n.data.name || activeNodeId;
+      const nodeName = (n && n.data) ? (n.data.name || activeNodeId) : activeNodeId;
+      // Push pre-mutation snapshot BEFORE clearing data
       pushHistoryState(`Clearing details of "${nodeName}"`);
 
       n.data = { name: '', empId: '', isActive: true, points: 20000 };
