@@ -74,14 +74,45 @@ let sizingMode = 'off';
 
 function toggleHierarchicalSizing(mode) {
   if (sizingMode === mode) {
+    // Toggle OFF
     sizingMode = 'off';
+    // When turning off 3-level focus, clear the sub-tree focus only if it was set by this mode
+    if (mode === 'focus_3_level') {
+      focusedRootName = null;
+      focusedRootId = null;
+      const focusPill = document.getElementById('focus-pill-top');
+      if (focusPill) focusPill.style.display = 'none';
+      try {
+        const url = new URL(window.location);
+        url.searchParams.delete('focus');
+        window.history.replaceState({}, '', url.pathname);
+      } catch(e) {}
+    }
   } else {
     sizingMode = mode;
+    // When turning ON 3-level focus, auto-set YAMUNA as the initial focused root
+    if (mode === 'focus_3_level') {
+      const yamunaNode = Object.values(nodes).find(
+        n => n.data && n.data.name && n.data.name.trim().toUpperCase() === 'YAMUNA'
+      );
+      const targetNode = yamunaNode || (rootId && nodes[rootId]);
+      if (targetNode) {
+        focusedRootId = targetNode.id;
+        focusedRootName = (targetNode.data && targetNode.data.name) ? targetNode.data.name.trim().toUpperCase() : null;
+        const focusPill = document.getElementById('focus-pill-top');
+        const treeName  = document.getElementById('top-focus-tree-name');
+        if (focusPill && treeName) {
+          treeName.textContent = targetNode.data.name;
+          focusPill.style.display = 'inline-flex';
+        }
+      }
+    }
   }
 
   updateSizingUI();
   saveLocalCache();
   renderAll();
+  if (sizingMode === 'focus_3_level') fitToScreen();
 }
 
 function updateSizingUI() {
@@ -1235,30 +1266,83 @@ let currentFakeNodesCleanup = [];
 let currentHiddenChildrenRestores = [];
 
 function apply3LevelFocusLogic(effectiveRoot) {
-  cleanup3LevelFocusLogic(); // Ensure clean state
-  let fakes = [];
-  let hidden = [];
-  
-  function traverse(id, currentDepth) {
-    const n = nodes[id];
-    if (!n) return;
-    
-    if (currentDepth >= 3) {
+  cleanup3LevelFocusLogic(); // Always start from a clean slate
+  const fakes  = [];
+  const hidden = [];
+
+  function traverse(nodeId, depth) {
+    const n = nodes[nodeId];
+    if (!n || n.isFake) return;
+
+    // ── Depth 3: hide all children so we don't render beyond 3 levels ──
+    if (depth >= 3) {
       if (n.children && n.children.length > 0) {
         hidden.push({ parent: n, origChildren: [...n.children] });
         n.children = [];
       }
       return;
     }
-    
-    // Traverse all real children — no fake empty slots created
-    if (n.children) {
-      n.children.forEach(cid => { if (nodes[cid]) traverse(cid, currentDepth + 1); });
+
+    // ── Depths 0-2: ensure both Branch A and Branch B exist ──
+    // Work on a snapshot so mutations don't confuse the search
+    const realChildren = [...(n.children || [])].filter(cid => nodes[cid] && !nodes[cid].isFake);
+
+    const hasA = realChildren.some(cid => nodes[cid].branchType === 'A');
+    const hasB = realChildren.some(cid => nodes[cid].branchType === 'B');
+
+    // Inject fake Branch A placeholder if missing
+    if (!hasA) {
+      const fakeId = '__fake_' + nodeId + '_A';
+      nodes[fakeId] = {
+        id: fakeId,
+        parent: nodeId,
+        children: [],
+        branchType: 'A',
+        depth: depth + 1,
+        x: 0, y: 0,
+        data: { name: '', empId: '', isActive: true },
+        isFake: true
+      };
+      n.children = [...realChildren, fakeId, ...realChildren.filter(c => nodes[c].branchType === 'B')];
+      // Rebuild cleanly: A-fakes first, then real children, then B-fakes
+      fakes.push({ parent: n, fakeId });
     }
+
+    // Inject fake Branch B placeholder if missing
+    if (!hasB) {
+      const fakeId = '__fake_' + nodeId + '_B';
+      nodes[fakeId] = {
+        id: fakeId,
+        parent: nodeId,
+        children: [],
+        branchType: 'B',
+        depth: depth + 1,
+        x: 0, y: 0,
+        data: { name: '', empId: '', isActive: true },
+        isFake: true
+      };
+      fakes.push({ parent: n, fakeId });
+    }
+
+    // Rebuild children array: real A, fake A if needed, real B, fake B if needed
+    const childrenA = realChildren.filter(cid => nodes[cid].branchType === 'A');
+    const childrenB = realChildren.filter(cid => nodes[cid].branchType === 'B');
+    const fakeAId   = !hasA ? ('__fake_' + nodeId + '_A') : null;
+    const fakeBId   = !hasB ? ('__fake_' + nodeId + '_B') : null;
+
+    n.children = [
+      ...childrenA,
+      ...(fakeAId ? [fakeAId] : []),
+      ...childrenB,
+      ...(fakeBId ? [fakeBId] : [])
+    ];
+
+    // Recurse into real children only
+    realChildren.forEach(cid => traverse(cid, depth + 1));
   }
 
   if (effectiveRoot) traverse(effectiveRoot, 0);
-  currentFakeNodesCleanup = []; // No fake nodes in this mode
+  currentFakeNodesCleanup       = fakes;
   currentHiddenChildrenRestores = hidden;
 }
 
@@ -1570,10 +1654,25 @@ function renderNode(n) {
 
   el.addEventListener('click', (e) => {
     e.stopPropagation();
-    if (n.isFake) return; // Do nothing for empty placeholders
-    
+
     if (sizingMode === 'focus_3_level') {
-      setSubtreeFocus(n.id);
+      if (n.isFake) {
+        // Clicking an empty slot → open the panel on its parent to add a real member
+        if (n.parent && nodes[n.parent]) openPanel(n.parent);
+        return;
+      }
+      // Drill-down: promote clicked node to focused root, regenerate 3-level view
+      focusedRootId   = n.id;
+      focusedRootName = (n.data && n.data.name) ? n.data.name.trim().toUpperCase() : null;
+      const focusPill = document.getElementById('focus-pill-top');
+      const treeName  = document.getElementById('top-focus-tree-name');
+      if (focusPill && treeName) {
+        treeName.textContent = (n.data && n.data.name) ? n.data.name : n.id;
+        focusPill.style.display = 'inline-flex';
+      }
+      showToast(`🔍 Focused on: ${(n.data && n.data.name) ? n.data.name : n.id}`);
+      renderAll();
+      fitToScreen();
       return;
     }
 
